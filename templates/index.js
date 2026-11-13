@@ -56,10 +56,12 @@ var LAYOUTS = [
  * 每个规格的宽高比必须能对上某个 shape（±5%），否则不允许出现在模板的 prints 里。
  * 90×54mm 名片尺寸（1.67:1）对不上 1.4:1 与 2:1 中的任何一个（偏差 17%~19%），
  * 因此没有收录——要用它只能新增一个 1.67:1 的形状，而不是硬塞。
+ * A6（105×148，0.7095）是 1:1.4（0.7143）的同类规格，偏差 0.67%，给竖版做小桌面牌用。
  */
 var PRINTS = [
-  { key: 'a4', label: '整页 A4', short: 'A4', spec: '210 × 297 mm', w: 210, h: 297 },
+  { key: 'a6', label: '小卡 A6', short: 'A6', spec: '105 × 148 mm', w: 105, h: 148 },
   { key: 'a5', label: '半页 A5', short: 'A5', spec: '148 × 210 mm', w: 148, h: 210 },
+  { key: 'a4', label: '整页 A4', short: 'A4', spec: '210 × 297 mm', w: 210, h: 297 },
   { key: 'a5land', label: '横版 A5', short: 'A5横向', spec: '210 × 148 mm', w: 210, h: 148 },
   { key: 'strip', label: '长条桌签', short: '长条', spec: '200 × 100 mm', w: 200, h: 100 },
   { key: 'tower', label: '竖条', short: '竖条', spec: '100 × 200 mm', w: 100, h: 200 },
@@ -93,7 +95,7 @@ var TEMPLATES = [
     layout: 'stack',
     mood: ['温馨', '传统'],
     region: '日式',
-    prints: ['a4', 'a5'],
+    prints: ['a6', 'a5', 'a4'],
     font: 'serif',
     desc: '深潭底色，一弯细月，右上角一列竖排小字，像客房门口的木牌。',
     palette: {
@@ -109,18 +111,18 @@ var TEMPLATES = [
       { type: 'ring', cx: 0.86, cy: 0.075, r: 0.16, w: 0.0012, color: 'accent', alpha: 0.22 },
       { type: 'ring', cx: 0.86, cy: 0.075, r: 0.2, w: 0.0007, color: 'accent', alpha: 0.1 },
       { type: 'line', x1: 0.5, y1: 0.062, x2: 0.5, y2: 0.084, w: 0.0014, color: 'accent', alpha: 0.55 },
-      { type: 'line', x1: 0.22, y1: 0.166, x2: 0.78, y2: 0.166, w: 0.0006, color: 'accent', alpha: 0.3 },
-      { type: 'line', x1: 0.16, y1: 0.905, x2: 0.84, y2: 0.905, w: 0.0007, color: 'ink', alpha: 0.1 }
+      { type: 'line', x1: 0.22, y1: 0.152, x2: 0.78, y2: 0.152, w: 0.0006, color: 'accent', alpha: 0.3 },
+      { type: 'line', x1: 0.16, y1: 0.955, x2: 0.84, y2: 0.955, w: 0.0007, color: 'ink', alpha: 0.1 }
     ],
     copy: { eyebrow: '客房网络', hint: '扫码即连 · 无需询问', vertical: '客房专用' },
     slots: {
-      eyebrow: { x: 0.5, y: 0.072, maxW: 0.6, size: 0.018, weight: '400', align: 'center', tracking: 0.22, color: 'accent' },
-      shop: { x: 0.5, y: 0.118, maxW: 0.74, size: 0.060, weight: '500', align: 'center', color: 'ink' },
-      vertical: { x: 0.9, y: 0.215, size: 0.019, step: 0.0295, color: 'inkSub', align: 'center' },
-      qr: { cx: 0.5, cy: 0.5, size: 0.44 },
-      ssid: { x: 0.5, y: 0.715, maxW: 0.7, size: 0.036, weight: '500', align: 'center', color: 'ink' },
-      pwd: { x: 0.5, y: 0.762, maxW: 0.7, size: 0.029, weight: '400', align: 'center', color: 'ink' },
-      hint: { x: 0.5, y: 0.815, maxW: 0.72, size: 0.022, weight: '400', align: 'center', color: 'inkSub' }
+      eyebrow: { x: 0.5, y: 0.062, maxW: 0.6, size: 0.021, weight: '400', align: 'center', tracking: 0.22, color: 'accent' },
+      shop: { x: 0.5, y: 0.108, maxW: 0.74, size: 0.072, weight: '500', align: 'center', color: 'ink' },
+      vertical: { x: 0.9, y: 0.255, size: 0.03, step: 0.042, color: 'ink', alpha: 0.86, align: 'center' },
+      qr: { cx: 0.5, cy: 0.455, size: 0.6 },
+      ssid: { x: 0.5, y: 0.765, maxW: 0.74, size: 0.046, weight: '500', align: 'center', color: 'ink' },
+      pwd: { x: 0.5, y: 0.828, maxW: 0.74, size: 0.038, weight: '400', align: 'center', color: 'ink' },
+      hint: { x: 0.5, y: 0.897, maxW: 0.72, size: 0.028, weight: '400', align: 'center', color: 'inkSub', optional: true }
     }
   },
 
@@ -156,7 +158,7 @@ var TEMPLATES = [
       shop: { x: 0.505, y: 0.425, maxW: 0.43, size: 0.092, weight: '500', align: 'left', color: 'ink' },
       ssid: { x: 0.505, y: 0.6, maxW: 0.43, size: 0.052, weight: '500', align: 'left', color: 'ink' },
       pwd: { x: 0.505, y: 0.677, maxW: 0.43, size: 0.042, weight: '400', align: 'left', color: 'ink' },
-      hint: { x: 0.505, y: 0.757, maxW: 0.43, size: 0.031, weight: '400', align: 'left', color: 'inkSub' }
+      hint: { x: 0.505, y: 0.757, maxW: 0.43, size: 0.031, weight: '400', align: 'left', color: 'inkSub', optional: true }
     }
   },
 
@@ -193,7 +195,7 @@ var TEMPLATES = [
       shop: { x: 0.385, y: 0.405, maxW: 0.46, size: 0.1, weight: '500', align: 'left', color: 'ink' },
       ssid: { x: 0.385, y: 0.565, maxW: 0.47, size: 0.052, weight: '500', align: 'left', color: 'ink' },
       pwd: { x: 0.385, y: 0.645, maxW: 0.47, size: 0.042, weight: '400', align: 'left', color: 'ink' },
-      hint: { x: 0.385, y: 0.725, maxW: 0.42, size: 0.031, weight: '400', align: 'left', color: 'inkSub' }
+      hint: { x: 0.385, y: 0.725, maxW: 0.42, size: 0.031, weight: '400', align: 'left', color: 'inkSub', optional: true }
     }
   },
 
@@ -225,12 +227,12 @@ var TEMPLATES = [
     ],
     copy: { eyebrow: '护理区', hint: '扫码连网 · 静享时光' },
     slots: {
-      eyebrow: { x: 0.5, y: 0.098, maxW: 0.62, size: 0.024, weight: '400', align: 'center', tracking: 0.2, color: 'accent' },
-      shop: { x: 0.5, y: 0.146, maxW: 0.8, size: 0.062, weight: '500', align: 'center', color: 'ink' },
-      qr: { cx: 0.5, cy: 0.468, size: 0.44 },
-      ssid: { x: 0.5, y: 0.728, maxW: 0.8, size: 0.044, weight: '500', align: 'center', color: 'ink' },
-      pwd: { x: 0.5, y: 0.781, maxW: 0.8, size: 0.036, weight: '400', align: 'center', color: 'ink' },
-      hint: { x: 0.5, y: 0.836, maxW: 0.82, size: 0.034, weight: '400', align: 'center', color: 'inkSub' }
+      eyebrow: { x: 0.5, y: 0.085, maxW: 0.62, size: 0.036, weight: '400', align: 'center', tracking: 0.2, color: 'accent' },
+      shop: { x: 0.5, y: 0.155, maxW: 0.8, size: 0.072, weight: '500', align: 'center', color: 'ink' },
+      qr: { cx: 0.5, cy: 0.46, size: 0.48 },
+      ssid: { x: 0.5, y: 0.775, maxW: 0.82, size: 0.05, weight: '500', align: 'center', color: 'ink' },
+      pwd: { x: 0.5, y: 0.85, maxW: 0.82, size: 0.048, weight: '400', align: 'center', color: 'ink' },
+      hint: { x: 0.5, y: 0.905, maxW: 0.82, size: 0.036, weight: '400', align: 'center', color: 'inkSub', optional: true }
     }
   },
 
@@ -243,7 +245,7 @@ var TEMPLATES = [
     layout: 'center',
     mood: ['都市'],
     region: '极简',
-    prints: ['a5', 'a4'],
+    prints: ['a6', 'a5', 'a4'],
     font: 'sans',
     desc: '没有一个装饰元素。深蓝渐变上只有三行字和一个码，靠字重与留白立住。',
     palette: {
@@ -258,12 +260,12 @@ var TEMPLATES = [
     motifs: [],
     copy: { eyebrow: '访客网络', hint: '扫码接入 · 会议专用' },
     slots: {
-      eyebrow: { x: 0.5, y: 0.095, maxW: 0.6, size: 0.015, weight: '400', align: 'center', tracking: 0.24, color: 'accent' },
-      shop: { x: 0.5, y: 0.152, maxW: 0.8, size: 0.072, weight: '500', align: 'center', color: 'ink' },
-      qr: { cx: 0.5, cy: 0.468, size: 0.5 },
-      ssid: { x: 0.5, y: 0.735, maxW: 0.8, size: 0.038, weight: '500', align: 'center', color: 'ink' },
-      pwd: { x: 0.5, y: 0.784, maxW: 0.8, size: 0.031, weight: '400', align: 'center', color: 'ink' },
-      hint: { x: 0.5, y: 0.842, maxW: 0.82, size: 0.02, weight: '400', align: 'center', color: 'inkSub' }
+      eyebrow: { x: 0.5, y: 0.075, maxW: 0.6, size: 0.021, weight: '400', align: 'center', tracking: 0.24, color: 'accent' },
+      shop: { x: 0.5, y: 0.132, maxW: 0.82, size: 0.082, weight: '500', align: 'center', color: 'ink' },
+      qr: { cx: 0.5, cy: 0.455, size: 0.58 },
+      ssid: { x: 0.5, y: 0.762, maxW: 0.82, size: 0.046, weight: '500', align: 'center', color: 'ink' },
+      pwd: { x: 0.5, y: 0.828, maxW: 0.82, size: 0.038, weight: '400', align: 'center', color: 'ink' },
+      hint: { x: 0.5, y: 0.897, maxW: 0.82, size: 0.028, weight: '400', align: 'center', color: 'inkSub', optional: true }
     }
   },
 
@@ -291,12 +293,12 @@ var TEMPLATES = [
     motifs: [],
     copy: { eyebrow: '候诊区', hint: '扫码连网 · 安静等候' },
     slots: {
-      eyebrow: { x: 0.5, y: 0.092, maxW: 0.62, size: 0.024, weight: '400', align: 'center', tracking: 0.2, color: 'accent' },
-      shop: { x: 0.5, y: 0.143, maxW: 0.8, size: 0.062, weight: '500', align: 'center', color: 'ink' },
-      qr: { cx: 0.5, cy: 0.47, size: 0.44 },
-      ssid: { x: 0.5, y: 0.73, maxW: 0.8, size: 0.044, weight: '500', align: 'center', color: 'ink' },
-      pwd: { x: 0.5, y: 0.783, maxW: 0.8, size: 0.036, weight: '400', align: 'center', color: 'ink' },
-      hint: { x: 0.5, y: 0.838, maxW: 0.82, size: 0.034, weight: '400', align: 'center', color: 'inkSub' }
+      eyebrow: { x: 0.5, y: 0.085, maxW: 0.62, size: 0.034, weight: '400', align: 'center', tracking: 0.2, color: 'accent' },
+      shop: { x: 0.5, y: 0.152, maxW: 0.8, size: 0.072, weight: '500', align: 'center', color: 'ink' },
+      qr: { cx: 0.5, cy: 0.462, size: 0.48 },
+      ssid: { x: 0.5, y: 0.775, maxW: 0.82, size: 0.05, weight: '500', align: 'center', color: 'ink' },
+      pwd: { x: 0.5, y: 0.85, maxW: 0.82, size: 0.048, weight: '400', align: 'center', color: 'ink' },
+      hint: { x: 0.5, y: 0.905, maxW: 0.82, size: 0.034, weight: '400', align: 'center', color: 'inkSub', optional: true }
     }
   },
 
@@ -332,7 +334,7 @@ var TEMPLATES = [
       shop: { x: 0.495, y: 0.42, maxW: 0.44, size: 0.088, weight: '500', align: 'left', color: 'ink' },
       ssid: { x: 0.495, y: 0.595, maxW: 0.44, size: 0.05, weight: '500', align: 'left', color: 'ink' },
       pwd: { x: 0.495, y: 0.672, maxW: 0.44, size: 0.04, weight: '400', align: 'left', color: 'ink' },
-      hint: { x: 0.495, y: 0.755, maxW: 0.42, size: 0.03, weight: '400', align: 'left', color: 'inkSub' }
+      hint: { x: 0.495, y: 0.755, maxW: 0.42, size: 0.03, weight: '400', align: 'left', color: 'inkSub', optional: true }
     }
   },
 
@@ -372,12 +374,12 @@ var TEMPLATES = [
     copy: { eyebrow: '营地网络', hint: '扫码连网 · 山里有信号', vertical: '山间小屋' },
     slots: {
       qr: { cx: 0.172, cy: 0.5, size: 0.52 },
-      vertical: { x: 0.945, y: 0.3, size: 0.018, step: 0.028, color: 'inkSub', align: 'center' },
+      vertical: { x: 0.945, y: 0.3, size: 0.032, step: 0.044, color: 'ink', alpha: 0.9, align: 'center' },
       eyebrow: { x: 0.355, y: 0.28, maxW: 0.4, size: 0.04, weight: '400', align: 'left', tracking: 0.18, color: 'accent' },
       shop: { x: 0.355, y: 0.4, maxW: 0.42, size: 0.094, weight: '500', align: 'left', color: 'ink' },
       ssid: { x: 0.355, y: 0.555, maxW: 0.43, size: 0.05, weight: '500', align: 'left', color: 'ink' },
       pwd: { x: 0.355, y: 0.635, maxW: 0.43, size: 0.04, weight: '400', align: 'left', color: 'ink' },
-      hint: { x: 0.355, y: 0.715, maxW: 0.41, size: 0.03, weight: '400', align: 'left', color: 'inkSub' }
+      hint: { x: 0.355, y: 0.715, maxW: 0.41, size: 0.03, weight: '400', align: 'left', color: 'inkSub', optional: true }
     }
   },
 
@@ -415,7 +417,7 @@ var TEMPLATES = [
       qr: { cx: 0.5, cy: 0.45, size: 0.42 },
       ssid: { x: 0.5, y: 0.715, maxW: 0.8, size: 0.044, weight: '500', align: 'center', color: 'ink' },
       pwd: { x: 0.5, y: 0.768, maxW: 0.8, size: 0.036, weight: '400', align: 'center', color: 'ink' },
-      hint: { x: 0.5, y: 0.823, maxW: 0.82, size: 0.032, weight: '400', align: 'center', color: 'inkSub' }
+      hint: { x: 0.5, y: 0.823, maxW: 0.82, size: 0.032, weight: '400', align: 'center', color: 'inkSub', optional: true }
     }
   },
 
@@ -446,12 +448,12 @@ var TEMPLATES = [
     ],
     copy: { eyebrow: '家庭网络', hint: '扫码连网 · 到家了' },
     slots: {
-      eyebrow: { x: 0.5, y: 0.1, maxW: 0.6, size: 0.022, weight: '400', align: 'center', tracking: 0.2, color: 'accent' },
-      shop: { x: 0.5, y: 0.155, maxW: 0.64, size: 0.064, weight: '500', align: 'center', color: 'ink' },
-      qr: { cx: 0.5, cy: 0.468, size: 0.44 },
-      ssid: { x: 0.5, y: 0.73, maxW: 0.72, size: 0.044, weight: '500', align: 'center', color: 'ink' },
-      pwd: { x: 0.5, y: 0.783, maxW: 0.72, size: 0.036, weight: '400', align: 'center', color: 'ink' },
-      hint: { x: 0.5, y: 0.838, maxW: 0.74, size: 0.034, weight: '400', align: 'center', color: 'inkSub' }
+      eyebrow: { x: 0.5, y: 0.088, maxW: 0.6, size: 0.032, weight: '400', align: 'center', tracking: 0.2, color: 'accent' },
+      shop: { x: 0.5, y: 0.158, maxW: 0.66, size: 0.072, weight: '500', align: 'center', color: 'ink' },
+      qr: { cx: 0.5, cy: 0.462, size: 0.48 },
+      ssid: { x: 0.5, y: 0.775, maxW: 0.74, size: 0.05, weight: '500', align: 'center', color: 'ink' },
+      pwd: { x: 0.5, y: 0.85, maxW: 0.74, size: 0.048, weight: '400', align: 'center', color: 'ink' },
+      hint: { x: 0.5, y: 0.905, maxW: 0.74, size: 0.034, weight: '400', align: 'center', color: 'inkSub', optional: true }
     }
   }
 ]
