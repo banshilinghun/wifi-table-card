@@ -5,6 +5,7 @@
 
 var DRAFT_KEY = 'wifi_draft'
 var SETTINGS_KEY = 'wifi_settings'
+var FILTERS_KEY = 'wifi_filters'
 
 function read (key, fallback) {
   try {
@@ -51,9 +52,19 @@ function saveSettings (settings) {
   return write(SETTINGS_KEY, next)
 }
 
+function getFilters () {
+  return read(FILTERS_KEY, null)
+}
+
+function saveFilters (filters) {
+  return write(FILTERS_KEY, filters)
+}
+
 module.exports = {
   getDraft: getDraft,
   saveDraft: saveDraft,
   getSettings: getSettings,
-  saveSettings: saveSettings
+  saveSettings: saveSettings,
+  getFilters: getFilters,
+  saveFilters: saveFilters
 }

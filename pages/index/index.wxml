@@ -1,33 +1,187 @@
-<view class="page">
-  <view class="hero">
-    <view class="hero-title">Wi-Fi 桌牌</view>
-    <view class="hero-sub">挑一个样式，扫码就能连网</view>
-  </view>
+<view class="root">
+  <view class="page">
+    <view class="masthead">
+      <view class="mast-left">
+        <text class="mast-kicker">WIFI SIGN</text>
+        <view class="mast-title-row">
+          <text class="mast-title">桌牌</text>
+          <text class="mast-count">{{matchCount}} / {{total}}</text>
+        </view>
+      </view>
+      <view class="filter-btn {{activeCount ? 'filter-btn-on' : ''}}" bindtap="openDrawer">
+        <view class="ico ico-filter">
+          <view class="ico-i a"></view>
+          <view class="ico-i b"></view>
+          <view class="ico-i c"></view>
+        </view>
+        <text class="filter-txt">筛选</text>
+        <view class="filter-badge" wx:if="{{activeCount}}">{{activeCount}}</view>
+      </view>
+    </view>
 
-  <view class="grid">
-    <view
-      class="cell"
-      wx:for="{{templates}}"
-      wx:key="id"
-      data-id="{{item.id}}"
-      bindtap="openEditor"
-      hover-class="cell-hover"
-      hover-stay-time="80"
-    >
-      <view class="canvas-box" style="background:{{item.bg}}">
-        <canvas
-          type="2d"
-          class="thumb"
-          style="width:{{cardW}}rpx;height:{{cardH}}rpx"
-        ></canvas>
+    <scroll-view class="scenes" scroll-x="true" enable-flex="false" show-scrollbar="false">
+      <view
+        class="scene {{item.on ? 'scene-on' : ''}}"
+        wx:for="{{scenes}}"
+        wx:key="key"
+        data-key="{{item.key}}"
+        bindtap="pickScene"
+      >
+        <view class="ico ico-{{item.icon}}">
+          <view class="ico-i a"></view>
+          <view class="ico-i b"></view>
+          <view class="ico-i c"></view>
+          <view class="ico-i d"></view>
+        </view>
+        <text class="scene-label">{{item.label}}</text>
       </view>
-      <view class="meta">
-        <text class="tpl-name">{{item.name}}</text>
-        <text class="tpl-tag">{{item.tag}}</text>
+    </scroll-view>
+
+    <view class="chips-line" wx:if="{{chips.length}}">
+      <view
+        class="chip chip-sm {{item.kind === 'pref' ? 'chip-pref' : ''}}"
+        wx:for="{{chips}}"
+        wx:key="key"
+        data-dim="{{item.dim}}"
+        data-key="{{item.key}}"
+        bindtap="toggleChip"
+      >
+        <text>{{item.label}}</text>
+        <text class="chip-x">×</text>
       </view>
+      <text class="chips-clear" bindtap="resetFilters">清空</text>
+    </view>
+
+    <view class="grid">
+      <view
+        class="cell"
+        wx:for="{{list}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        bindtap="openEditor"
+        hover-class="cell-hover"
+        hover-stay-time="60"
+      >
+        <view class="thumb-box">
+          <canvas
+            type="2d"
+            class="thumb"
+            style="width:{{item.thumbW}}rpx;height:{{item.thumbH}}rpx"
+          ></canvas>
+        </view>
+        <view class="cell-meta">
+          <text class="cell-name">{{item.name}}</text>
+          <text class="cell-shape">{{item.shape}}</text>
+        </view>
+        <text class="cell-prints">{{item.printsText}} · {{item.region}}</text>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{!list.length}}">
+      <text class="empty-title">没有符合的模板</text>
+      <text class="empty-sub">形状与打印格式是过滤条件，放宽一项就会出现结果。</text>
+      <view class="empty-btn" bindtap="resetFilters">重置筛选</view>
+    </view>
+
+    <view class="foot">
+      <view class="foot-link" bindtap="goTest">二维码内核自检 ›</view>
+      <text class="foot-note">全部数据仅存本机 · 无网络请求 · v{{version}}</text>
     </view>
   </view>
 
-  <view class="foot-link" bindtap="goTest">二维码内核自检 ›</view>
-  <view class="foot-note">全部数据仅存本机 · 无网络请求 · v{{version}}</view>
+  <view class="mask" wx:if="{{drawer}}" bindtap="closeDrawer" catchtouchmove="noop"></view>
+
+  <view class="drawer {{drawer ? 'drawer-on' : ''}}" catchtouchmove="noop">
+    <view class="grip"></view>
+
+    <view class="drawer-head">
+      <text class="drawer-title">筛选</text>
+      <view class="drawer-close" bindtap="closeDrawer">
+        <view class="ico ico-close">
+          <view class="ico-i a"></view>
+          <view class="ico-i b"></view>
+        </view>
+      </view>
+    </view>
+
+    <scroll-view class="drawer-body" scroll-y="true">
+      <view class="group">
+        <view class="group-head">
+          <text class="group-name">形状</text>
+          <text class="tag tag-filter">过滤</text>
+        </view>
+        <view class="chip-row">
+          <view
+            class="chip {{item.on ? 'chip-on' : ''}}"
+            wx:for="{{shapes}}"
+            wx:key="key"
+            data-dim="shapes"
+            data-key="{{item.key}}"
+            bindtap="toggleChip"
+          >{{item.label}}</view>
+        </view>
+      </view>
+
+      <view class="group">
+        <view class="group-head">
+          <text class="group-name">打印格式</text>
+          <text class="tag tag-filter">过滤</text>
+        </view>
+        <view class="chip-row">
+          <view
+            class="chip {{item.on ? 'chip-on' : ''}}"
+            wx:for="{{printOpts}}"
+            wx:key="key"
+            data-dim="prints"
+            data-key="{{item.key}}"
+            bindtap="toggleChip"
+          >{{item.label}}</view>
+        </view>
+        <text class="group-note">卡片 90 × 54mm · 迷你 60 × 60mm · 只列出二维码可扫、文字可读的规格</text>
+      </view>
+
+      <view class="note">
+        形状与打印格式是过滤：不符合的模板会从列表里收起。<text class="note-em">氛围与地区是偏好</text>：符合的排到前面，其余照常显示。
+      </view>
+
+      <view class="group">
+        <view class="group-head">
+          <text class="group-name">氛围</text>
+          <text class="tag tag-pref">偏好 · 可多选</text>
+        </view>
+        <view class="chip-row">
+          <view
+            class="chip chip-pref {{item.on ? 'chip-on-pref' : ''}}"
+            wx:for="{{moods}}"
+            wx:key="key"
+            data-dim="moods"
+            data-key="{{item.key}}"
+            bindtap="toggleChip"
+          >{{item.label}}</view>
+        </view>
+      </view>
+
+      <view class="group group-last">
+        <view class="group-head">
+          <text class="group-name">地区</text>
+          <text class="tag tag-pref">偏好 · 可多选</text>
+        </view>
+        <view class="chip-row">
+          <view
+            class="chip chip-pref {{item.on ? 'chip-on-pref' : ''}}"
+            wx:for="{{regions}}"
+            wx:key="key"
+            data-dim="regions"
+            data-key="{{item.key}}"
+            bindtap="toggleChip"
+          >{{item.label}}</view>
+        </view>
+      </view>
+    </scroll-view>
+
+    <view class="drawer-foot">
+      <view class="btn-ghost" bindtap="resetFilters">重置</view>
+      <view class="btn-solid" bindtap="closeDrawer">查看 {{matchCount}} 个模板</view>
+    </view>
+  </view>
 </view>

@@ -1,13 +1,19 @@
 <view class="page">
-  <view class="preview-card">
+  <view class="stage">
     <canvas
       type="2d"
       id="preview"
       class="preview"
       style="width:{{previewW}}rpx;height:{{previewH}}rpx"
     ></canvas>
-    <view class="preview-tag">{{tplName}}</view>
   </view>
+
+  <view class="stage-meta">
+    <text class="stage-name">{{tplName}}</text>
+    <text class="stage-sep">/</text>
+    <text class="stage-print">{{printLabel}}</text>
+  </view>
+  <view class="stage-sub">{{sceneLabel}} · {{region}} · {{shape}} · 二维码 {{qrMm}}mm</view>
 
   <view class="form">
     <view class="field">
@@ -25,7 +31,7 @@
     <view class="field">
       <view class="label-row">
         <text class="label">Wi-Fi 名称</text>
-        <text class="counter {{ssidBytes > 32 ? 'counter-over' : ''}}">{{ssidBytes}}/32 字节</text>
+        <text class="counter {{ssidBytes > 32 ? 'counter-over' : ''}}">{{ssidBytes}} / 32 字节</text>
       </view>
       <input
         class="input"
@@ -53,7 +59,7 @@
       />
     </view>
 
-    <view class="field field-last">
+    <view class="field">
       <text class="label">加密方式</text>
       <view class="seg">
         <view
@@ -63,6 +69,28 @@
           data-key="{{item.key}}"
           bindtap="pickType"
         >{{item.label}}</view>
+      </view>
+    </view>
+
+    <view class="field field-last">
+      <view class="label-row">
+        <text class="label">打印尺寸</text>
+        <text class="counter">{{printSpec}}</text>
+      </view>
+
+      <view class="seg" wx:if="{{canSwitch}}">
+        <view
+          wx:for="{{prints}}"
+          wx:key="key"
+          class="seg-item {{item.on ? 'seg-item-on' : ''}}"
+          data-key="{{item.key}}"
+          bindtap="pickPrint"
+        >{{item.label}}</view>
+      </view>
+
+      <view class="single-print" wx:else>
+        <text class="single-print-name">{{printLabel}}</text>
+        <text class="single-print-note">该模板只提供这一种规格</text>
       </view>
     </view>
   </view>

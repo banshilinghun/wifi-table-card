@@ -5,11 +5,13 @@
     "pages/test/test"
   ],
   "window": {
-    "backgroundTextStyle": "dark",
-    "navigationBarBackgroundColor": "#F7F4EE",
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#0A0B0D",
     "navigationBarTitleText": "Wi-Fi 桌牌",
-    "navigationBarTextStyle": "black",
-    "backgroundColor": "#F7F4EE"
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#0A0B0D",
+    "backgroundColorTop": "#0A0B0D",
+    "backgroundColorBottom": "#0A0B0D"
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json"

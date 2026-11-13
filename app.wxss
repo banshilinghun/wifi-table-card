@@ -1,30 +1,169 @@
 page {
-  --paper: #f7f4ee;
-  --ink: #2a2724;
-  --ink-soft: #6b655c;
-  --line: #e2dcd0;
-  --accent: #b0552f;
-  background: var(--paper);
-  color: var(--ink);
+  /* 深色底：近黑带一点暖，避免纯黑在 OLED 上发灰 */
+  --bg: #0a0b0d;
+  --surface: #131519;
+  --surface-2: #1c1f24;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --text: #f3f4f6;
+  --text-2: #9ba1aa;
+  --text-3: #626871;
+  --accent: #d9c08c;
+  --accent-soft: rgba(217, 192, 140, 0.12);
+  --jade: #7fb9a8;
+
+  background: var(--bg);
+  color: var(--text);
   font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
   font-size: 28rpx;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 .page {
   min-height: 100vh;
-  padding: 32rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
+  padding: 0 32rpx calc(40rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
-}
-
-.card {
-  background: #ffffff;
-  border: 1rpx solid var(--line);
-  border-radius: 20rpx;
-  padding: 32rpx;
 }
 
 .mono {
   font-family: "SF Mono", Menlo, Consolas, monospace;
   word-break: break-all;
 }
+
+/* ── 线性图标 ─────────────────────────────────────────────
+ * 用描边与圆角在 CSS 里画，不用图片、不用字体文件：
+ * 目的是颜色随父级 currentColor 走，且不引入任何外部资源。
+ * 每个图标最多 4 个部件（.ico-i a/b/c/d），按需给哪个部件上样式。
+ */
+
+.ico {
+  position: relative;
+  width: 32rpx;
+  height: 32rpx;
+  flex: none;
+  display: block;
+}
+
+.ico-i {
+  position: absolute;
+  box-sizing: border-box;
+  border-color: currentColor;
+  background-color: currentColor;
+}
+
+/* 全部 · 四宫格 */
+.ico-all .a,
+.ico-all .b,
+.ico-all .c,
+.ico-all .d {
+  width: 13rpx;
+  height: 13rpx;
+  border: 2rpx solid;
+  border-radius: 3rpx;
+  background: none;
+}
+.ico-all .a { left: 0; top: 0; }
+.ico-all .b { left: 19rpx; top: 0; }
+.ico-all .c { left: 0; top: 19rpx; }
+.ico-all .d { left: 19rpx; top: 19rpx; }
+
+/* 住宿 · 床 */
+.ico-bed .a {
+  left: 2rpx; top: 8rpx; width: 28rpx; height: 15rpx;
+  border: 2rpx solid; border-radius: 5rpx; background: none;
+}
+.ico-bed .b { left: 2rpx; top: 26rpx; width: 28rpx; height: 2rpx; }
+.ico-bed .c {
+  left: 6rpx; top: 11rpx; width: 9rpx; height: 5rpx;
+  border: 2rpx solid; border-radius: 2rpx; background: none;
+}
+
+/* 咖啡馆 · 杯 */
+.ico-cup .a {
+  left: 4rpx; top: 7rpx; width: 17rpx; height: 17rpx;
+  border: 2rpx solid; border-radius: 0 0 7rpx 7rpx; background: none;
+}
+.ico-cup .b {
+  left: 21rpx; top: 11rpx; width: 7rpx; height: 8rpx;
+  border: 2rpx solid; border-radius: 50%; background: none;
+}
+.ico-cup .c { left: 3rpx; top: 27rpx; width: 26rpx; height: 2rpx; }
+
+/* 餐厅酒吧 · 酒杯 */
+.ico-glass .a {
+  left: 8rpx; top: 3rpx; width: 16rpx; height: 13rpx;
+  border: 2rpx solid; border-radius: 0 0 9rpx 9rpx; background: none;
+}
+.ico-glass .b { left: 15rpx; top: 16rpx; width: 2rpx; height: 9rpx; }
+.ico-glass .c { left: 10rpx; top: 25rpx; width: 12rpx; height: 2rpx; }
+
+/* 美容保健 · 叶 */
+.ico-leaf .a {
+  left: 8rpx; top: 8rpx; width: 16rpx; height: 16rpx;
+  border: 2rpx solid; border-radius: 50% 0 50% 50%;
+  background: none; transform: rotate(45deg);
+}
+.ico-leaf .b {
+  left: 15rpx; top: 6rpx; width: 2rpx; height: 19rpx;
+  transform: rotate(45deg);
+}
+
+/* 办公会议 · 屏幕 */
+.ico-desk .a {
+  left: 3rpx; top: 5rpx; width: 26rpx; height: 15rpx;
+  border: 2rpx solid; border-radius: 3rpx; background: none;
+}
+.ico-desk .b { left: 14rpx; top: 21rpx; width: 4rpx; height: 3rpx; }
+.ico-desk .c { left: 9rpx; top: 25rpx; width: 14rpx; height: 2rpx; }
+
+/* 诊所医疗 · 十字 */
+.ico-pulse .a { left: 15rpx; top: 4rpx; width: 2rpx; height: 24rpx; border-radius: 1rpx; }
+.ico-pulse .b { left: 4rpx; top: 15rpx; width: 24rpx; height: 2rpx; border-radius: 1rpx; }
+
+/* 接待等候 · 拱门 */
+.ico-arch .a {
+  left: 6rpx; top: 5rpx; width: 20rpx; height: 21rpx;
+  border: 2rpx solid; border-bottom: none;
+  border-radius: 11rpx 11rpx 0 0; background: none;
+}
+.ico-arch .b { left: 3rpx; top: 27rpx; width: 26rpx; height: 2rpx; }
+
+/* 户外旅游 · 罗盘 */
+.ico-peak .a {
+  left: 3rpx; top: 3rpx; width: 26rpx; height: 26rpx;
+  border: 2rpx solid; border-radius: 50%; background: none;
+}
+.ico-peak .b {
+  left: 14rpx; top: 8rpx; width: 3rpx; height: 16rpx;
+  border-radius: 2rpx; transform: rotate(32deg);
+}
+
+/* 活动场地 · 旗 */
+.ico-flag .a { left: 7rpx; top: 3rpx; width: 2rpx; height: 26rpx; }
+.ico-flag .b {
+  left: 9rpx; top: 5rpx; width: 15rpx; height: 10rpx;
+  border: 2rpx solid; border-radius: 0 4rpx 4rpx 0; background: none;
+}
+
+/* 家用 · 屋 */
+.ico-roof .a {
+  left: 8rpx; top: 2rpx; width: 15rpx; height: 15rpx;
+  border: 2rpx solid; border-right: none; border-bottom: none;
+  background: none; transform: rotate(45deg);
+}
+.ico-roof .b {
+  left: 8rpx; top: 16rpx; width: 16rpx; height: 14rpx;
+  border: 2rpx solid; border-top: none;
+  border-radius: 0 0 3rpx 3rpx; background: none;
+}
+
+/* 筛选 · 三条长度递减的横线 */
+.ico-filter { width: 28rpx; height: 26rpx; }
+.ico-filter .a { left: 0; top: 5rpx; width: 28rpx; height: 2rpx; }
+.ico-filter .b { left: 0; top: 12rpx; width: 18rpx; height: 2rpx; }
+.ico-filter .c { left: 0; top: 19rpx; width: 10rpx; height: 2rpx; }
+
+/* 关闭 · × */
+.ico-close .a { left: 6rpx; top: 15rpx; width: 20rpx; height: 2rpx; transform: rotate(45deg); }
+.ico-close .b { left: 6rpx; top: 15rpx; width: 20rpx; height: 2rpx; transform: rotate(-45deg); }

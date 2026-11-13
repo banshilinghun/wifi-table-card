@@ -1,28 +1,58 @@
-.preview-card {
+.stage {
+  /* 高度交给内容：横版卡片不会被 720rpx 的空舞台撑出一大片留白 */
+  min-height: 300rpx;
+  padding: 40rpx 0 10rpx;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  padding: 32rpx 0 40rpx;
+  justify-content: center;
 }
 
 .preview {
   display: block;
-  border-radius: 10rpx;
-  box-shadow: 0 10rpx 32rpx rgba(42, 39, 36, 0.14);
+  border-radius: 6rpx;
+  box-shadow: 0 26rpx 60rpx rgba(0, 0, 0, 0.62);
 }
 
-.preview-tag {
-  margin-top: 18rpx;
-  font-size: 21rpx;
-  color: #a29a8d;
-  letter-spacing: 1rpx;
+.stage-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  margin-top: 8rpx;
 }
+
+.stage-name {
+  font-size: 28rpx;
+  letter-spacing: 2rpx;
+  color: var(--text);
+}
+
+.stage-sep {
+  margin: 0 10rpx;
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+
+.stage-print {
+  font-size: 23rpx;
+  color: var(--accent);
+}
+
+.stage-sub {
+  margin-top: 10rpx;
+  text-align: center;
+  font-size: 20rpx;
+  letter-spacing: 0.5rpx;
+  color: var(--text-3);
+}
+
+/* ── 表单 ─────────────────────────────────────────────── */
 
 .form {
-  background: #ffffff;
-  border: 1rpx solid var(--line);
-  border-radius: 20rpx;
+  margin-top: 40rpx;
   padding: 0 28rpx;
+  background: var(--surface);
+  border: 1rpx solid var(--line);
+  border-radius: 22rpx;
 }
 
 .field {
@@ -41,90 +71,109 @@
 }
 
 .label {
-  font-size: 24rpx;
-  color: var(--ink-soft);
+  font-size: 23rpx;
   letter-spacing: 1rpx;
+  color: var(--text-3);
 }
 
 .counter {
-  font-size: 21rpx;
-  color: #b3ab9e;
+  font-size: 20rpx;
+  color: var(--text-3);
 }
 
 .counter-over {
-  color: #c0392b;
+  color: #e0785f;
 }
 
 .toggle {
-  font-size: 23rpx;
-  color: var(--accent);
   padding: 4rpx 8rpx;
+  font-size: 22rpx;
+  color: var(--accent);
 }
 
 .input {
   margin-top: 12rpx;
-  font-size: 30rpx;
-  color: var(--ink);
+  font-size: 31rpx;
   line-height: 1.5;
+  color: var(--text);
 }
 
 .ph {
-  color: #c4bcae;
+  color: #4a4f57;
 }
 
 .seg {
   display: flex;
   margin-top: 16rpx;
   padding: 6rpx;
-  background: #f3efe7;
-  border-radius: 12rpx;
+  background: rgba(255, 255, 255, 0.045);
+  border-radius: 14rpx;
 }
 
 .seg-item {
   flex: 1;
   text-align: center;
-  font-size: 24rpx;
-  line-height: 62rpx;
-  color: var(--ink-soft);
-  border-radius: 8rpx;
+  font-size: 23rpx;
+  line-height: 64rpx;
+  color: var(--text-2);
+  border-radius: 10rpx;
 }
 
 .seg-item-on {
-  background: #ffffff;
-  color: var(--ink);
+  background: var(--text);
+  color: #0b0c0e;
   font-weight: 500;
-  box-shadow: 0 2rpx 8rpx rgba(42, 39, 36, 0.08);
+}
+
+.single-print {
+  display: flex;
+  align-items: baseline;
+  margin-top: 14rpx;
+}
+
+.single-print-name {
+  font-size: 25rpx;
+  color: var(--text);
+}
+
+.single-print-note {
+  margin-left: 14rpx;
+  font-size: 20rpx;
+  color: var(--text-3);
+}
+
+/* ── 提示 ─────────────────────────────────────────────── */
+
+.hint-line {
+  margin-top: 24rpx;
+  padding: 0 8rpx;
+  text-align: center;
+  font-size: 21rpx;
+  color: var(--text-3);
 }
 
 .warn {
   margin-top: 24rpx;
   padding: 20rpx 24rpx;
   border-radius: 12rpx;
-  background: #fdf6e6;
-}
-
-.hint-line {
-  margin-top: 24rpx;
-  padding: 0 8rpx;
-  text-align: center;
-  font-size: 22rpx;
-  color: #a29a8d;
+  border-left: 3rpx solid rgba(224, 120, 95, 0.7);
+  background: rgba(224, 120, 95, 0.08);
 }
 
 .warn-item {
   display: block;
-  font-size: 23rpx;
-  line-height: 1.65;
-  color: #8a6a1f;
+  font-size: 22rpx;
+  line-height: 1.7;
+  color: #d8a08f;
 }
 
 .status {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 28rpx;
-  font-size: 22rpx;
-  color: #a29a8d;
+  margin-top: 30rpx;
+  font-size: 21rpx;
+  color: var(--text-3);
 }
 
 .status-dot {
@@ -132,14 +181,14 @@
   height: 10rpx;
   margin-right: 10rpx;
   border-radius: 50%;
-  background: #7fae7f;
+  background: var(--jade);
 }
 
 .payload {
-  margin-top: 18rpx;
-  padding: 0 8rpx 32rpx;
+  margin-top: 16rpx;
+  padding: 0 8rpx 40rpx;
   text-align: center;
-  font-size: 19rpx;
-  line-height: 1.6;
-  color: #b9b1a4;
+  font-size: 18rpx;
+  line-height: 1.65;
+  color: #474c54;
 }

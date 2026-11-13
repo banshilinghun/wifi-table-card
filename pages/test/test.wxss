@@ -1,3 +1,10 @@
+.card {
+  padding: 32rpx;
+  background: var(--surface);
+  border: 1rpx solid var(--line);
+  border-radius: 22rpx;
+}
+
 .head {
   display: flex;
   align-items: center;
@@ -7,22 +14,23 @@
 .title {
   font-size: 30rpx;
   font-weight: 500;
+  color: var(--text);
 }
 
 .badge {
-  font-size: 22rpx;
-  color: var(--ink-soft);
+  padding: 4rpx 16rpx;
   border: 1rpx solid var(--line);
   border-radius: 999rpx;
-  padding: 4rpx 16rpx;
+  font-size: 21rpx;
+  color: var(--text-3);
 }
 
 .seg {
   display: flex;
   margin-top: 28rpx;
   padding: 6rpx;
-  background: #f3efe7;
-  border-radius: 12rpx;
+  background: rgba(255, 255, 255, 0.045);
+  border-radius: 14rpx;
 }
 
 .seg-item {
@@ -30,13 +38,13 @@
   text-align: center;
   font-size: 26rpx;
   line-height: 64rpx;
-  color: var(--ink-soft);
-  border-radius: 8rpx;
+  color: var(--text-2);
+  border-radius: 10rpx;
 }
 
 .seg-item-on {
-  background: #ffffff;
-  color: var(--ink);
+  background: var(--text);
+  color: #0b0c0e;
   font-weight: 500;
 }
 
@@ -55,8 +63,8 @@
 }
 
 .rows {
-  border-top: 1rpx solid var(--line);
   padding-top: 16rpx;
+  border-top: 1rpx solid var(--line);
 }
 
 .row {
@@ -68,12 +76,12 @@
 
 .k {
   flex: 0 0 110rpx;
-  color: var(--ink-soft);
+  color: var(--text-3);
 }
 
 .v {
   flex: 1;
-  color: var(--ink);
+  color: var(--text);
 }
 
 .payload {
@@ -84,8 +92,8 @@
   margin-top: 16rpx;
   padding: 16rpx;
   border-radius: 8rpx;
-  background: #fdecea;
-  color: #a02c22;
+  background: rgba(224, 120, 95, 0.12);
+  color: #e09a88;
   font-size: 24rpx;
 }
 
@@ -93,13 +101,13 @@
   margin-top: 24rpx;
   padding: 20rpx;
   border-radius: 8rpx;
-  background: #fdf6e6;
+  background: rgba(217, 192, 140, 0.09);
 }
 
 .warn-title {
   font-size: 24rpx;
-  color: #8a6a1f;
   font-weight: 500;
+  color: var(--accent);
 }
 
 .warn-item {
@@ -107,13 +115,13 @@
   margin-top: 8rpx;
   font-size: 23rpx;
   line-height: 1.6;
-  color: #8a6a1f;
+  color: #bda97e;
 }
 
 .hint {
   margin-top: 32rpx;
   padding: 0 8rpx;
-  font-size: 23rpx;
-  line-height: 1.7;
-  color: #a29a8d;
+  font-size: 22rpx;
+  line-height: 1.75;
+  color: var(--text-3);
 }
