@@ -12,6 +12,7 @@
 var fs = require('fs')
 var path = require('path')
 var zlib = require('zlib')
+var cp = require('child_process')
 
 var wifi = require('../utils/wifi')
 var qrCanvas = require('../utils/qr-canvas')
@@ -162,6 +163,35 @@ function encodePNG (size, rgb) {
   ])
 }
 
+/* ---------- 渲染 + 回读 ---------- */
+
+function renderToPNG (text, size, file) {
+  var ctx = new RecordingContext(size)
+  qrCanvas.drawQRCode(ctx, text, {
+    x: 0,
+    y: 0,
+    size: size,
+    quiet: 4,
+    ec: 'M',
+    dark: '#171614',
+    light: '#FFFFFF'
+  })
+  fs.writeFileSync(file, encodePNG(size, ctx.data))
+  return file
+}
+
+function decodePNG (file) {
+  var out = ''
+  try {
+    out = cp.execFileSync('swift', [path.join(__dirname, 'decode.swift'), file], { encoding: 'utf8' })
+  } catch (err) {
+    // 解不出字符串时 swift 以退出码 1 结束，载荷不会出现在 stdout
+    out = String(err.stdout || '')
+  }
+  var line = out.split('\n').filter(function (l) { return l.indexOf('载荷: ') === 0 })[0]
+  return line ? line.slice(4) : null
+}
+
 /* ---------- 渲染 ---------- */
 
 var SIZE = parseInt(process.env.QR_SIZE, 10) || 620
@@ -190,9 +220,52 @@ var outFile = path.join(outDir, 'qr-test.png')
 fs.writeFileSync(outFile, encodePNG(SIZE, ctx.data))
 console.log('  PNG: ' + outFile + ' (' + fs.statSync(outFile).size + ' bytes)')
 
+/* ---------- 解码一致性：把图读回来，与原文逐字符比对 ---------- */
+
+console.log('\n[3] 扫码解码一致性（系统 CIDetector 回读）')
+
+var hasSwift = false
+try {
+  hasSwift = cp.spawnSync('swift', ['--version'], { stdio: 'ignore' }).status === 0
+} catch (e) {
+  hasSwift = false
+}
+
+var decodeCases = [
+  {
+    name: 'SSID=咖啡店（3 字节 UTF-8）',
+    payload: wifi.buildWifiString({ ssid: '咖啡店', password: 'coffee2024' }).value,
+    expected: 'WIFI:T:WPA;S:咖啡店;P:coffee2024;;'
+  },
+  {
+    name: 'SSID=Café☕（重音符 + 符号）',
+    payload: wifi.buildWifiString({ ssid: 'Café☕', password: 'cafe2024' }).value,
+    expected: 'WIFI:T:WPA;S:Café☕;P:cafe2024;;'
+  },
+  {
+    name: 'SSID=Café☕🎉（含 4 字节代理对）',
+    payload: wifi.buildWifiString({ ssid: 'Café☕🎉', password: 'cafe2024' }).value,
+    expected: 'WIFI:T:WPA;S:Café☕🎉;P:cafe2024;;'
+  }
+]
+
+if (!hasSwift) {
+  console.log('  ! 未检测到 swift，解码校验未执行（不计为通过）')
+  fail++
+} else {
+  decodeCases.forEach(function (item, i) {
+    check(item.name + ' · 载荷格式', item.payload, item.expected)
+    var file = renderToPNG(item.payload, SIZE, path.join(outDir, 'decode-' + i + '.png'))
+    var decoded = decodePNG(file)
+    check(item.name + ' · 回读一致', decoded, item.payload)
+    console.log('      原文: ' + item.payload)
+    console.log('      回读: ' + (decoded === null ? '(解码失败)' : decoded))
+  })
+}
+
 /* ---------- ASCII 预览（便于快速核对定位图案） ---------- */
 
-console.log('\n[3] 矩阵预览（## = 深色模块）')
+console.log('\n[4] 矩阵预览（## = 深色模块）')
 var qr = qrCanvas.createQR(demo.value, 'M')
 var count = qr.getModuleCount()
 var quiet = 2

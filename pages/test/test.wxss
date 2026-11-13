@@ -17,8 +17,31 @@
   padding: 4rpx 16rpx;
 }
 
+.seg {
+  display: flex;
+  margin-top: 28rpx;
+  padding: 6rpx;
+  background: #f3efe7;
+  border-radius: 12rpx;
+}
+
+.seg-item {
+  flex: 1;
+  text-align: center;
+  font-size: 26rpx;
+  line-height: 64rpx;
+  color: var(--ink-soft);
+  border-radius: 8rpx;
+}
+
+.seg-item-on {
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 500;
+}
+
 .qr-wrap {
-  margin: 32rpx auto 24rpx;
+  margin: 28rpx auto 24rpx;
   width: 560rpx;
   height: 560rpx;
   display: flex;

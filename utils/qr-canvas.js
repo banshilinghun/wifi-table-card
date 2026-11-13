@@ -19,7 +19,10 @@ var EC_LEVELS = { L: true, M: true, Q: true, H: true }
 function createQR (text, ecLevel) {
   var level = EC_LEVELS[ecLevel] ? ecLevel : 'M'
   var qr = qrcode(0, level)
-  // 默认 Byte 模式，库内部按 UTF-8 编码，中文 SSID 不会乱码
+  // qrcode-generator 默认的 stringToBytes 用 charCodeAt(i) & 0xff，
+  // 中文会被截成单字节，扫出来是乱码甚至解不出字符串。
+  // addData 之前必须切到库里自带的 UTF-8 实现（utils/qrcode.js 已挂载）。
+  qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8']
   qr.addData(String(text == null ? '' : text))
   qr.make()
   return qr

@@ -5,6 +5,16 @@
       <view class="badge">EC {{ec}} · 静区 {{quiet}}</view>
     </view>
 
+    <view class="seg">
+      <view
+        wx:for="{{demos}}"
+        wx:key="key"
+        class="seg-item {{demo === item.key ? 'seg-item-on' : ''}}"
+        data-demo="{{item.key}}"
+        bindtap="switchDemo"
+      >{{item.label}}</view>
+    </view>
+
     <view class="qr-wrap">
       <canvas
         type="2d"
@@ -19,11 +29,11 @@
     <view class="rows">
       <view class="row">
         <text class="k">SSID</text>
-        <text class="v mono">Test</text>
+        <text class="v mono">{{ssid}}</text>
       </view>
       <view class="row">
         <text class="k">密码</text>
-        <text class="v mono">a;b"c</text>
+        <text class="v mono">{{password}}</text>
       </view>
       <view class="row">
         <text class="k">载荷</text>
@@ -45,5 +55,5 @@
     </view>
   </view>
 
-  <view class="hint">用手机相机或微信扫一扫识别上方二维码，应能弹出「Test」网络连接提示。</view>
+  <view class="hint">切换示例后二维码立即重绘。用手机相机或微信扫一扫，中文示例应识别为「咖啡店」而不是乱码。</view>
 </view>
