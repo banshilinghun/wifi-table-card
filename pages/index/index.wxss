@@ -360,6 +360,15 @@
 .drawer-body {
   padding: 6rpx 32rpx 20rpx;
   max-height: 56vh;
+  /* scroll-view 默认 content-box，宽度 100% 再加左右内边距会横向溢出 64rpx */
+  box-sizing: border-box;
+}
+
+/* 部分基础库上 show-scrollbar 不生效，这里再压一道 */
+.drawer-body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 .group {

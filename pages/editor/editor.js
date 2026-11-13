@@ -15,7 +15,7 @@ var PREVIEW_MAX_H = 700
 
 function getDpr () {
   try {
-    var info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
+    var info = wx.getWindowInfo()
     return info.pixelRatio || 2
   } catch (e) {
     return 2

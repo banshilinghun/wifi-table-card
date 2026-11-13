@@ -1,0 +1,14 @@
+{
+  "name": "wifi-sign-devtools-auto",
+  "version": "1.0.0",
+  "private": true,
+  "description": "微信开发者工具自动化：真实模拟器截图、控制台采集与点击验证",
+  "scripts": {
+    "shoot": "node shoot.js",
+    "tap": "node tap-test.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "miniprogram-automator": "^0.13.0"
+  }
+}

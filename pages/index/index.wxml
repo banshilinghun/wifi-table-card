@@ -52,7 +52,8 @@
       <text class="chips-clear" bindtap="resetFilters">清空</text>
     </view>
 
-    <view class="grid">
+    <!-- 抽屉打开时整个网格移出渲染树：canvas 是原生组件，层级永远盖在抽屉之上 -->
+    <view class="grid" wx:if="{{!drawer}}">
       <view
         class="cell"
         wx:for="{{list}}"
@@ -105,7 +106,7 @@
       </view>
     </view>
 
-    <scroll-view class="drawer-body" scroll-y="true">
+    <scroll-view class="drawer-body" scroll-y="true" show-scrollbar="false">
       <view class="group">
         <view class="group-head">
           <text class="group-name">形状</text>

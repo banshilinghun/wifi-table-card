@@ -18,7 +18,7 @@ var THUMB_MAX_H = 380
 
 function getDpr () {
   try {
-    var info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
+    var info = wx.getWindowInfo()
     return info.pixelRatio || 2
   } catch (e) {
     return 2
@@ -121,47 +121,61 @@ Page({
 
     if (!tpls.length) return
 
-    wx.createSelectorQuery()
-      .in(this)
-      .selectAll('.thumb')
-      .fields({ node: true, size: true })
-      .exec(function (res) {
-        var items = (res && res[0]) || []
+    // 抽屉打开时网格被移出渲染树（canvas 是原生层，会盖住抽屉），
+    // 此时没有画布可画，关闭抽屉时会重新绘制
+    if (this.data.drawer) return
 
-        if (items.length !== tpls.length) {
-          console.warn('[index] 画布 ' + items.length + ' 个 / 模板 ' + tpls.length + ' 个，数量不一致')
-        }
+    // 筛选后列表刚变短时，画布节点可能还没挂载完；先重试两次再报
+    function query (left) {
+      wx.createSelectorQuery()
+        .in(that)
+        .selectAll('.thumb')
+        .fields({ node: true, size: true })
+        .exec(function (res) {
+          var items = (res && res[0]) || []
 
-        var dpr = getDpr()
+          if (items.length !== tpls.length && left > 0) {
+            setTimeout(function () { query(left - 1) }, 80)
+            return
+          }
 
-        for (var i = 0; i < items.length; i++) {
-          var item = items[i]
-          var tpl = tpls[i]
-          if (!item || !item.node || !tpl) continue
+          if (items.length !== tpls.length) {
+            console.warn('[index] 画布 ' + items.length + ' 个 / 模板 ' + tpls.length + ' 个，数量不一致')
+          }
 
-          var w = Math.round(item.width)
-          var h = Math.round(item.height)
-          if (!w || !h) continue
+          var dpr = getDpr()
 
-          var canvas = item.node
-          var ctx = canvas.getContext('2d')
+          for (var i = 0; i < items.length; i++) {
+            var item = items[i]
+            var tpl = tpls[i]
+            if (!item || !item.node || !tpl) continue
 
-          canvas.width = Math.round(w * dpr)
-          canvas.height = Math.round(h * dpr)
-          ctx.scale(dpr, dpr)
+            var w = Math.round(item.width)
+            var h = Math.round(item.height)
+            if (!w || !h) continue
 
-          render.renderSign(ctx, tpl, {
-            shopName: SAMPLE.shopName,
-            ssid: SAMPLE.ssid,
-            password: SAMPLE.password,
-            type: SAMPLE.type,
-            showPassword: true,
-            payload: that.payload
-          }, w, h)
-        }
+            var canvas = item.node
+            var ctx = canvas.getContext('2d')
 
-        console.log('[index] 缩略图绘制 ' + items.length + ' 个')
-      })
+            canvas.width = Math.round(w * dpr)
+            canvas.height = Math.round(h * dpr)
+            ctx.scale(dpr, dpr)
+
+            render.renderSign(ctx, tpl, {
+              shopName: SAMPLE.shopName,
+              ssid: SAMPLE.ssid,
+              password: SAMPLE.password,
+              type: SAMPLE.type,
+              showPassword: true,
+              payload: that.payload
+            }, w, h)
+          }
+
+          console.log('[index] 缩略图绘制 ' + items.length + ' 个')
+        })
+    }
+
+    query(2)
   },
 
   /* ── 交互 ───────────────────────────────────────── */
@@ -207,7 +221,11 @@ Page({
   },
 
   closeDrawer: function () {
-    this.setData({ drawer: false })
+    var that = this
+    // 网格在抽屉打开时被移除，关闭后要重新挂载并重绘缩略图
+    this.setData({ drawer: false }, function () {
+      that.drawThumbs()
+    })
   },
 
   noop: function () {},
