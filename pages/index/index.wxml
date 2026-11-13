@@ -52,8 +52,8 @@
       <text class="chips-clear" bindtap="resetFilters">清空</text>
     </view>
 
-    <!-- 抽屉打开时整个网格移出渲染树：canvas 是原生组件，层级永远盖在抽屉之上 -->
-    <view class="grid" wx:if="{{!drawer}}">
+    <!-- 缩略图是离屏 canvas 画好后转出来的图片，页面里不再挂 canvas 节点 -->
+    <view class="grid">
       <view
         class="cell"
         wx:for="{{list}}"
@@ -64,11 +64,18 @@
         hover-stay-time="60"
       >
         <view class="thumb-box">
-          <canvas
-            type="2d"
+          <view
+            class="thumb-ph"
+            wx:if="{{!item.img}}"
+            style="width:{{item.thumbW}}rpx;height:{{item.thumbH}}rpx;background:{{item.tint}}"
+          ></view>
+          <image
+            wx:else
             class="thumb"
+            src="{{item.img}}"
+            mode="aspectFit"
             style="width:{{item.thumbW}}rpx;height:{{item.thumbH}}rpx"
-          ></canvas>
+          />
         </view>
         <view class="cell-meta">
           <text class="cell-name">{{item.name}}</text>
@@ -106,7 +113,7 @@
       </view>
     </view>
 
-    <scroll-view class="drawer-body" scroll-y="true" show-scrollbar="false">
+    <scroll-view class="drawer-body" scroll-y="true" enhanced="true" show-scrollbar="false" bounces="false">
       <view class="group">
         <view class="group-head">
           <text class="group-name">形状</text>
@@ -139,7 +146,7 @@
             bindtap="toggleChip"
           >{{item.label}}</view>
         </view>
-        <text class="group-note">A4 · A5 · 横版 A5 · 长条 200×100 · 竖条 100×200 · 迷你 60×60（mm）—— 每种规格的宽高比都与对应的形状相符</text>
+        <text class="group-note">A6 小卡 105×148 · A5 · A4 · 横版 A5 · 长条 200×100 · 竖条 100×200 · 迷你 60×60（mm）—— 每种规格的宽高比都与对应的形状相符</text>
       </view>
 
       <view class="note">

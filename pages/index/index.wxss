@@ -197,6 +197,13 @@
   box-shadow: 0 14rpx 32rpx rgba(0, 0, 0, 0.55);
 }
 
+/* 图片还没生成好时的占位：用模板自身的底色，不是一块突兀的白 */
+.thumb-ph {
+  display: block;
+  border-radius: 4rpx;
+  opacity: 0.42;
+}
+
 .cell-meta {
   display: flex;
   align-items: center;
@@ -385,6 +392,9 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 18rpx;
+  /* 滚动条是覆盖在内容右边缘上的（位置跟着内容盒走，加内边距躲不开），
+     只能让标签自己退 14rpx，否则「过滤」两个字会被压住 */
+  padding-right: 14rpx;
 }
 
 .group-name {
@@ -447,7 +457,8 @@
 }
 
 .note {
-  margin: 26rpx 0 4rpx;
+  /* 右边 14rpx 同样是为了避开覆盖式滚动条 */
+  margin: 26rpx 14rpx 4rpx 0;
   padding: 22rpx 24rpx;
   border-left: 3rpx solid rgba(217, 192, 140, 0.55);
   border-radius: 0 10rpx 10rpx 0;

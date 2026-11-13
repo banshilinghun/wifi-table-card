@@ -80,7 +80,8 @@ Page({
     this.showPassword = true
 
     var draft = store.getDraft()
-    var printKey = this.template.prints[0]
+    // 多种规格时默认整页 A4（大尺寸先看整体版式），只有一种就按它来
+    var printKey = this.template.prints.indexOf('a4') !== -1 ? 'a4' : this.template.prints[0]
     if (draft && draft.tplId === this.template.id) {
       if (typeof draft.shopName === 'string') this.form.shopName = draft.shopName
       if (typeof draft.ssid === 'string') this.form.ssid = draft.ssid
@@ -250,6 +251,7 @@ Page({
 
   render: function () {
     var that = this
+    var print = lib.getPrint(this.printKey)
 
     wx.createSelectorQuery()
       .in(this)
@@ -279,7 +281,9 @@ Page({
           password: that.form.password,
           type: that.form.type,
           showPassword: that.showPassword,
-          payload: that.payload
+          payload: that.payload,
+          // 成品物理尺寸：提示语放不放得下按真实毫米判断，预览与打印一致
+          mm: { w: print.w, h: print.h }
         }, w, h)
 
         console.log('[editor] ' + that.template.id + ' / ' + that.printKey +
@@ -287,6 +291,7 @@ Page({
           ' qr=' + meta.qr.moduleCount + '模块' +
           (meta.ssid ? ' ssid字号=' + meta.ssid.size.toFixed(1) + (meta.ssid.shrunk ? '(已缩小)' : '') : '') +
           (meta.pwd ? ' 密码=' + meta.pwd.value + '(' + meta.pwd.size.toFixed(1) + 'px 等宽)' : ' 无密码行') +
+          (meta.hintSkipped ? ' 提示语隐藏(' + meta.hintSkipped + ')' : '') +
           (meta.ssid && meta.ssid.truncated ? '(已截断)' : ''))
       })
   }

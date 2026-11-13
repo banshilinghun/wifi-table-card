@@ -16,13 +16,81 @@ var SAMPLE = {
 var THUMB_MAX_W = 333
 var THUMB_MAX_H = 380
 
+/**
+ * 缩略图缓存：模板 id + 尺寸 + dpr → 临时图片路径。
+ * 挂在模块上而不是页面实例上——从编辑页返回首页时页面会重建，
+ * 但图片还在，不必再画一遍（这也是「来回切筛选不闪」的前提）。
+ */
+var thumbCache = {}
+var thumbFailed = {}
+
 function getDpr () {
   try {
     var info = wx.getWindowInfo()
-    return info.pixelRatio || 2
+    // dpr 3 的机型上 333rpx 已经是 519 物理像素，再高只是浪费内存
+    return Math.min(info.pixelRatio || 2, 3)
   } catch (e) {
     return 2
   }
+}
+
+/** 750rpx 设计稿 → 逻辑像素 */
+function rpxScale () {
+  try {
+    var info = wx.getWindowInfo()
+    return (info.windowWidth || 375) / 750
+  } catch (e) {
+    return 0.5
+  }
+}
+
+function thumbKey (id, box) {
+  return id + '@' + box.width + 'x' + box.height + '@' + getDpr()
+}
+
+/**
+ * 离屏 canvas 画一张缩略图 → 转临时图片路径。
+ * 用 wx.createOffscreenCanvas：不在渲染树里，就没有原生层压住抽屉的问题，
+ * 抽屉打开时网格也不必再从渲染树里摘掉。
+ */
+function paintThumb (tpl, box, payload) {
+  var dpr = getDpr()
+  var k = rpxScale()
+  var w = Math.max(1, Math.round(box.width * k))
+  var h = Math.max(1, Math.round(box.height * k))
+  var pw = Math.round(w * dpr)
+  var ph = Math.round(h * dpr)
+
+  var print = lib.getPrint((tpl.prints && tpl.prints[0]) || 'a5')
+
+  var canvas = wx.createOffscreenCanvas({ type: '2d', width: pw, height: ph })
+  var ctx = canvas.getContext('2d')
+  ctx.scale(dpr, dpr)
+
+  render.renderSign(ctx, tpl, {
+    shopName: SAMPLE.shopName,
+    ssid: SAMPLE.ssid,
+    password: SAMPLE.password,
+    type: SAMPLE.type,
+    showPassword: true,
+    payload: payload,
+    mm: { w: print.w, h: print.h }
+  }, w, h)
+
+  return new Promise(function (resolve, reject) {
+    wx.canvasToTempFilePath({
+      canvas: canvas,
+      x: 0,
+      y: 0,
+      width: pw,
+      height: ph,
+      destWidth: pw,
+      destHeight: ph,
+      fileType: 'png',
+      success: function (res) { resolve(res.tempFilePath) },
+      fail: reject
+    })
+  })
 }
 
 Page({
@@ -38,7 +106,7 @@ Page({
     matchCount: 0,
     total: 0,
     drawer: false,
-    version: '0.4.0'
+    version: '0.5.0'
   },
 
   onLoad: function () {
@@ -50,11 +118,69 @@ Page({
     this.refreshFilters()
     this.applyList()
 
+    // 一次性把 10 张缩略图都生成好，之后筛选只重排、不再现画
+    this.buildThumbs()
+
     console.log('[index] 模板 ' + lib.TEMPLATES.length + ' 个 · 当前条件 ' + JSON.stringify(this.filterState))
   },
 
-  onReady: function () {
-    this.drawThumbs()
+  /* ── 缩略图 ─────────────────────────────────────── */
+
+  buildThumbs: function () {
+    var that = this
+    var tpls = lib.TEMPLATES
+    var i = 0
+
+    if (!wx.createOffscreenCanvas) {
+      console.warn('[index] 当前基础库不支持离屏 canvas，缩略图退化为色块占位')
+      return
+    }
+
+    function next () {
+      if (i >= tpls.length) {
+        console.log('[index] 缩略图就绪 ' + Object.keys(thumbCache).length + ' 张')
+        return
+      }
+
+      var tpl = tpls[i++]
+      var box = lib.fitBox(lib.shapeRatio(tpl), THUMB_MAX_W, THUMB_MAX_H)
+      var key = thumbKey(tpl.id, box)
+
+      if (thumbCache[key] || thumbFailed[key]) { next(); return }
+
+      paintThumb(tpl, box, that.payload).then(function (path) {
+        thumbCache[key] = path
+        that.fillImages()
+        next()
+      }).catch(function (err) {
+        // 失败就留色块，不阻塞后面的模板
+        thumbFailed[key] = true
+        console.warn('[index] 缩略图生成失败 ' + tpl.id + ' ' + ((err && err.errMsg) || err))
+        next()
+      })
+    }
+
+    next()
+  },
+
+  /** 只补齐还空着的格子，已经显示出来的图片不动（避免 setData 触发重新加载） */
+  fillImages: function () {
+    var list = this.data.list
+    var patch = {}
+    var n = 0
+
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].img) continue
+      var box = { width: list[i].thumbW, height: list[i].thumbH }
+      var path = thumbCache[thumbKey(list[i].id, box)]
+      if (path) {
+        patch['list[' + i + '].img'] = path
+        list[i].img = path
+        n++
+      }
+    }
+
+    if (n) this.setData(patch)
   },
 
   /* ── 筛选状态 → 视图 ─────────────────────────────── */
@@ -90,7 +216,6 @@ Page({
   },
 
   applyList: function () {
-    var that = this
     var result = filterLib.apply(lib.TEMPLATES, this.filterState)
     var list = []
 
@@ -103,79 +228,17 @@ Page({
         name: tpl.name,
         shape: tpl.shape,
         region: tpl.region,
+        tint: (tpl.palette && tpl.palette.bg) || '#1A1A1A',
         sceneLabel: lib.sceneText(tpl),
         printsText: lib.printText(tpl),
         thumbW: box.width,
-        thumbH: box.height
+        thumbH: box.height,
+        // 已生成的直接带上，没有的留空由 fillImages 补
+        img: thumbCache[thumbKey(tpl.id, box)] || ''
       })
     })
 
-    this.setData({ list: list, matchCount: list.length }, function () {
-      that.drawThumbs()
-    })
-  },
-
-  drawThumbs: function () {
-    var that = this
-    var tpls = this.viewList || []
-
-    if (!tpls.length) return
-
-    // 抽屉打开时网格被移出渲染树（canvas 是原生层，会盖住抽屉），
-    // 此时没有画布可画，关闭抽屉时会重新绘制
-    if (this.data.drawer) return
-
-    // 筛选后列表刚变短时，画布节点可能还没挂载完；先重试两次再报
-    function query (left) {
-      wx.createSelectorQuery()
-        .in(that)
-        .selectAll('.thumb')
-        .fields({ node: true, size: true })
-        .exec(function (res) {
-          var items = (res && res[0]) || []
-
-          if (items.length !== tpls.length && left > 0) {
-            setTimeout(function () { query(left - 1) }, 80)
-            return
-          }
-
-          if (items.length !== tpls.length) {
-            console.warn('[index] 画布 ' + items.length + ' 个 / 模板 ' + tpls.length + ' 个，数量不一致')
-          }
-
-          var dpr = getDpr()
-
-          for (var i = 0; i < items.length; i++) {
-            var item = items[i]
-            var tpl = tpls[i]
-            if (!item || !item.node || !tpl) continue
-
-            var w = Math.round(item.width)
-            var h = Math.round(item.height)
-            if (!w || !h) continue
-
-            var canvas = item.node
-            var ctx = canvas.getContext('2d')
-
-            canvas.width = Math.round(w * dpr)
-            canvas.height = Math.round(h * dpr)
-            ctx.scale(dpr, dpr)
-
-            render.renderSign(ctx, tpl, {
-              shopName: SAMPLE.shopName,
-              ssid: SAMPLE.ssid,
-              password: SAMPLE.password,
-              type: SAMPLE.type,
-              showPassword: true,
-              payload: that.payload
-            }, w, h)
-          }
-
-          console.log('[index] 缩略图绘制 ' + items.length + ' 个')
-        })
-    }
-
-    query(2)
+    this.setData({ list: list, matchCount: list.length })
   },
 
   /* ── 交互 ───────────────────────────────────────── */
@@ -221,11 +284,7 @@ Page({
   },
 
   closeDrawer: function () {
-    var that = this
-    // 网格在抽屉打开时被移除，关闭后要重新挂载并重绘缩略图
-    this.setData({ drawer: false }, function () {
-      that.drawThumbs()
-    })
+    this.setData({ drawer: false })
   },
 
   noop: function () {},
