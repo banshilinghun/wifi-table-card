@@ -58,6 +58,7 @@ Page({
     password: '',
     type: 'WPA',
     showPwd: false,
+    showPassword: true,
     types: TYPES,
     payload: '',
     warnings: [],
@@ -76,6 +77,7 @@ Page({
 
     // 表单实时值放在实例上，避免每次输入都 setData 造成光标跳动
     this.form = { shopName: '', ssid: '', password: '', type: 'WPA' }
+    this.showPassword = true
 
     var draft = store.getDraft()
     var printKey = this.template.prints[0]
@@ -84,6 +86,7 @@ Page({
       if (typeof draft.ssid === 'string') this.form.ssid = draft.ssid
       if (typeof draft.password === 'string') this.form.password = draft.password
       if (draft.type) this.form.type = draft.type
+      if (typeof draft.showPassword === 'boolean') this.showPassword = draft.showPassword
       if (draft.printKey && this.template.prints.indexOf(draft.printKey) !== -1) {
         printKey = draft.printKey
       }
@@ -100,13 +103,14 @@ Page({
     this.setData({
       tplId: this.template.id,
       tplName: this.template.name,
-      sceneLabel: lib.getScene(this.template.scene).label,
+      sceneLabel: lib.sceneText(this.template),
       region: this.template.region,
       shape: this.template.shape,
       shopName: this.form.shopName,
       ssid: this.form.ssid,
       password: this.form.password,
-      type: this.form.type
+      type: this.form.type,
+      showPassword: this.showPassword
     })
 
     this.applyPrint(printKey)
@@ -134,10 +138,7 @@ Page({
     var box = lib.fitBox(ratio, PREVIEW_MAX_W, PREVIEW_MAX_H)
 
     // 二维码在成品上的实际边长：slot.size 相对短边，短边即 min(mm)
-    var portrait = key === 'card' && tpl.cardPortrait
-    var pw = portrait ? print.h : print.w
-    var ph = portrait ? print.w : print.h
-    var qrMm = Math.round(tpl.slots.qr.size * Math.min(pw, ph))
+    var qrMm = Math.round(tpl.slots.qr.size * Math.min(print.w, print.h))
 
     var opts = tpl.prints.map(function (k) {
       return { key: k, label: lib.getPrint(k).short, on: k === key }
@@ -191,6 +192,14 @@ Page({
     this.setData({ showPwd: !this.data.showPwd })
   },
 
+  /** 桌牌上是否印密码（默认开） */
+  toggleShowPassword: function () {
+    this.showPassword = !this.showPassword
+    this.setData({ showPassword: this.showPassword })
+    this.renderLater()
+    this.saveLater()
+  },
+
   pickType: function (e) {
     var key = e.currentTarget.dataset.key
     if (!key || key === this.form.type) return
@@ -230,6 +239,7 @@ Page({
       ssid: this.form.ssid,
       password: this.form.password,
       type: this.form.type,
+      showPassword: this.showPassword,
       updatedAt: Date.now()
     })
 
@@ -267,6 +277,8 @@ Page({
           shopName: that.form.shopName || '你的店名',
           ssid: that.form.ssid || '你的 Wi-Fi',
           password: that.form.password,
+          type: that.form.type,
+          showPassword: that.showPassword,
           payload: that.payload
         }, w, h)
 
@@ -274,6 +286,7 @@ Page({
           ' ' + w + '×' + h +
           ' qr=' + meta.qr.moduleCount + '模块' +
           (meta.ssid ? ' ssid字号=' + meta.ssid.size.toFixed(1) + (meta.ssid.shrunk ? '(已缩小)' : '') : '') +
+          (meta.pwd ? ' 密码=' + meta.pwd.value + '(' + meta.pwd.size.toFixed(1) + 'px 等宽)' : ' 无密码行') +
           (meta.ssid && meta.ssid.truncated ? '(已截断)' : ''))
       })
   }

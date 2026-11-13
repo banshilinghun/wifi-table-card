@@ -59,6 +59,16 @@
       />
     </view>
 
+    <view class="field" wx:if="{{type !== 'nopass'}}">
+      <view class="label-row">
+        <text class="label">在桌牌上显示密码</text>
+        <view class="sw {{showPassword ? 'sw-on' : ''}}" bindtap="toggleShowPassword">
+          <view class="sw-knob"></view>
+        </view>
+      </view>
+      <text class="field-note">{{showPassword ? '密码以等宽字体印在 Wi-Fi 名称下方，字号同级' : '密码只写进二维码，桌牌上不出现'}}</text>
+    </view>
+
     <view class="field">
       <text class="label">加密方式</text>
       <view class="seg">

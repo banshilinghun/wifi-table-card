@@ -682,11 +682,38 @@ var SCREENS = [
     storage: {
       wifi_draft: {
         tplId: 'morning-mist',
-        printKey: 'card',
+        printKey: 'a5land',
         shopName: '拾光咖啡',
         ssid: 'Shiguang-Cafe',
         password: 'coffee2024',
         type: 'WPA',
+        showPassword: true,
+        updatedAt: 0
+      }
+    }
+  },
+  {
+    name: 'home-empty',
+    route: 'pages/index/index',
+    size: [390, 844],
+    storage: {
+      wifi_filters: { scene: 'all', shapes: ['1:2'], prints: ['mini'], moods: ['自然'], regions: [] }
+    }
+  },
+  {
+    name: 'editor-center',
+    route: 'pages/editor/editor',
+    query: { tpl: 'still-water' },
+    size: [390, 844],
+    storage: {
+      wifi_draft: {
+        tplId: 'still-water',
+        printKey: 'mini',
+        shopName: '静水理疗',
+        ssid: 'StillWater',
+        password: 'care2026',
+        type: 'WPA',
+        showPassword: true,
         updatedAt: 0
       }
     }

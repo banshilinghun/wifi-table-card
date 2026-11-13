@@ -41,10 +41,14 @@ function toggle (list, value) {
 
 /**
  * 过滤：返回 true 表示这条模板留下。
- * 场景为单选的硬过滤；形状、打印格式多选，命中任意一个即通过。
+ * 场景为单选的硬过滤（模板的 scene 是数组，命中任意一个即可）；
+ * 形状、打印格式多选，命中任意一个即通过。
  */
 function passes (tpl, f) {
-  if (f.scene && f.scene !== 'all' && tpl.scene !== f.scene) return false
+  if (f.scene && f.scene !== 'all') {
+    var scenes = Array.isArray(tpl.scene) ? tpl.scene : [tpl.scene]
+    if (scenes.indexOf(f.scene) === -1) return false
+  }
 
   if (f.shapes && f.shapes.length && !contains(f.shapes, tpl.shape)) return false
 
@@ -105,14 +109,23 @@ function hasHardFilter (f) {
   return (f.shapes && f.shapes.length > 0) || (f.prints && f.prints.length > 0)
 }
 
-/** 右上角角标数字：只数「过滤」类条件，偏好不计 */
+/**
+ * 右上角角标数字：只数「过滤」类条件（形状、打印格式）。
+ * 偏好（氛围、地区）不隐藏任何模板，所以不计入角标；它们通过 chips 展示。
+ */
 function activeCount (f) {
   var n = 0
   if (f.shapes && f.shapes.length) n++
   if (f.prints && f.prints.length) n++
-  if (f.moods && f.moods.length) n++
-  if (f.regions && f.regions.length) n++
   return n
+}
+
+/** 只清掉过滤类条件（形状 + 打印格式），偏好保留 */
+function clearHard (f) {
+  var next = clone(f)
+  next.shapes = []
+  next.prints = []
+  return next
 }
 
 /** 摘要芯片，按添加顺序展示 */
@@ -172,6 +185,7 @@ module.exports = {
   apply: apply,
   hasHardFilter: hasHardFilter,
   activeCount: activeCount,
+  clearHard: clearHard,
   chips: chips,
   load: load,
   save: save

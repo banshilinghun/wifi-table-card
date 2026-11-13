@@ -261,6 +261,14 @@
   color: var(--text);
 }
 
+.empty-alt {
+  display: block;
+  margin-top: 26rpx;
+  font-size: 21rpx;
+  color: var(--text-3);
+  text-decoration: underline;
+}
+
 /* ── 页脚 ─────────────────────────────────────────────── */
 
 .foot {

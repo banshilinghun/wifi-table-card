@@ -15,6 +15,7 @@ var qrCanvas = require('./qr-canvas')
 
 var SANS = '-apple-system, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif'
 var SERIF = '"Songti SC", "STSong", "Times New Roman", "SimSun", serif'
+var MONO = '"SF Mono", "Menlo", "Consolas", "Courier New", monospace'
 
 var QR_QUIET = 4
 
@@ -24,10 +25,25 @@ function family (tpl) {
   return tpl && tpl.font === 'serif' ? SERIF : SANS
 }
 
+/** 密码一律等宽；其余文字跟随模板字体 */
+function fontOf (tpl, slot) {
+  return slot && slot.mono ? MONO : family(tpl)
+}
+
 function color (tpl, value) {
   if (!value) return '#000000'
   if (value.charAt(0) === '#') return value
   return (tpl.palette && tpl.palette[value]) || '#000000'
+}
+
+/** #RRGGBB → rgba()，用于径向渐变淡出（小程序 canvas 不认 8 位 hex） */
+function withAlpha (hex, a) {
+  var h = String(hex).replace('#', '')
+  if (h.length === 3) h = h.charAt(0) + h.charAt(0) + h.charAt(1) + h.charAt(1) + h.charAt(2) + h.charAt(2)
+  var r = parseInt(h.substr(0, 2), 16) || 0
+  var g = parseInt(h.substr(2, 2), 16) || 0
+  var b = parseInt(h.substr(4, 2), 16) || 0
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')'
 }
 
 function setFont (ctx, size, weight, fam) {
@@ -408,6 +424,119 @@ function drawMotifs (ctx, tpl, W, H, M) {
         break
       }
 
+      case 'meander': {
+        var mInset = (m.inset || 0.045) * M
+        var unit = Math.max(4, (m.step || 0.055) * M)
+        var mTh = Math.max(0.4, (m.thick || 0.002) * M)
+        ctx.strokeStyle = fill
+        ctx.lineWidth = mTh
+        ctx.lineCap = 'butt'
+        ctx.lineJoin = 'miter'
+
+        // 回纹单元：一个带钩的方折，转 90° 就变成竖边
+        function fret (fx, fy, rot) {
+          ctx.save()
+          ctx.translate(fx, fy)
+          ctx.rotate(rot)
+          ctx.beginPath()
+          ctx.moveTo(0, unit)
+          ctx.lineTo(0, 0)
+          ctx.lineTo(unit * 0.86, 0)
+          ctx.lineTo(unit * 0.86, unit * 0.72)
+          ctx.lineTo(unit * 0.32, unit * 0.72)
+          ctx.lineTo(unit * 0.32, unit * 0.3)
+          ctx.lineTo(unit * 0.62, unit * 0.3)
+          ctx.stroke()
+          ctx.restore()
+        }
+
+        var mCols = Math.max(1, Math.floor((W - mInset * 2) / unit))
+        var mRows = Math.max(1, Math.floor((H - mInset * 2) / unit))
+        var mX = (W - mCols * unit) / 2
+        var mY = (H - mRows * unit) / 2
+        for (var mc = 0; mc < mCols; mc++) {
+          fret(mX + (mc + 1) * unit, mY, 0)
+          fret(mX + (mc + 1) * unit, mY + mRows * unit, Math.PI)
+        }
+        for (var mr = 0; mr < mRows; mr++) {
+          fret(mX, mY + mr * unit, -Math.PI / 2)
+          fret(mX + mCols * unit, mY + (mr + 1) * unit, Math.PI / 2)
+        }
+        break
+      }
+
+      case 'seal': {
+        // 印章：实心方块 + 白色内框 + 中心负形，远看就是一枚朱印
+        var ss = (m.size || 0.09) * M
+        var sx = m.x * W - ss / 2
+        var sy = m.y * H - ss / 2
+        var sPad = ss * 0.15
+        var sInk = m.ink ? color(tpl, m.ink) : '#FFFFFF'
+        ctx.fillStyle = fill
+        roundedRect(ctx, sx, sy, ss, ss, ss * 0.06)
+        ctx.fill()
+        ctx.strokeStyle = sInk
+        ctx.lineWidth = Math.max(0.5, ss * 0.055)
+        ctx.strokeRect(sx + sPad, sy + sPad, ss - sPad * 2, ss - sPad * 2)
+        ctx.fillStyle = sInk
+        var sIn = ss * 0.2
+        ctx.fillRect(sx + ss / 2 - sIn / 2, sy + ss / 2 - sIn / 2, sIn, sIn)
+        break
+      }
+
+      case 'softcorner': {
+        // 柔和圆角光晕：径向渐变淡出，不会出现硬边（韩式）
+        var sc = (m.size || 0.4) * M
+        var cax = m.x * W
+        var cay = m.y * H
+        var sg = ctx.createRadialGradient(cax, cay, 0, cax, cay, sc)
+        sg.addColorStop(0, withAlpha(fill, 1))
+        sg.addColorStop(0.55, withAlpha(fill, 0.55))
+        sg.addColorStop(1, withAlpha(fill, 0))
+        ctx.fillStyle = sg
+        ctx.beginPath()
+        ctx.arc(cax, cay, sc, 0, Math.PI * 2)
+        ctx.fill()
+        break
+      }
+
+      case 'ornament': {
+        var oi = (m.inset || 0.045) * M
+        var oc = (m.curl || 0.032) * M
+        var ow = Math.max(0.4, (m.w || 0.0011) * M)
+        var oi2 = oi + Math.max(2, M * 0.014)
+        ctx.strokeStyle = fill
+        ctx.lineWidth = ow
+        ctx.strokeRect(oi, oi, W - oi * 2, H - oi * 2)
+        ctx.lineWidth = ow * 0.65
+        ctx.strokeRect(oi2, oi2, W - oi2 * 2, H - oi2 * 2)
+        // 四角小卷（细边框装饰角）
+        ctx.lineWidth = ow
+        var ocs = [
+          [oi2, oi2, 0],
+          [W - oi2, oi2, Math.PI * 0.5],
+          [W - oi2, H - oi2, Math.PI],
+          [oi2, H - oi2, Math.PI * 1.5]
+        ]
+        for (var oc2 = 0; oc2 < ocs.length; oc2++) {
+          ctx.beginPath()
+          ctx.arc(ocs[oc2][0], ocs[oc2][1], oc, ocs[oc2][2], ocs[oc2][2] + Math.PI * 0.5)
+          ctx.stroke()
+        }
+        // 底边中点一枚小菱形
+        var dY = H - oi
+        var dR = Math.max(1.4, oc * 0.5)
+        ctx.beginPath()
+        ctx.moveTo(W / 2, dY - dR)
+        ctx.lineTo(W / 2 + dR, dY)
+        ctx.lineTo(W / 2, dY + dR)
+        ctx.lineTo(W / 2 - dR, dY)
+        ctx.closePath()
+        ctx.fillStyle = fill
+        ctx.fill()
+        break
+      }
+
       default:
         break
     }
@@ -467,6 +596,126 @@ function drawSlot (ctx, tpl, slot, text, W, H, M, defaultMinScale) {
   return fitted
 }
 
+/**
+ * 竖排小字（日式）：逐字向下叠放，字距由 step 控制。
+ * 每个字单独测量，emoji 或全角字符不会互相挤压。
+ */
+function drawVertical (ctx, tpl, slot, text, W, H, M) {
+  if (!slot || !text) return null
+
+  var fam = family(tpl)
+  var size = slot.size * M
+  var step = (slot.step || slot.size * 1.5) * M
+  var chars = splitChars(text)
+
+  setFont(ctx, size, 400, fam)
+  ctx.fillStyle = color(tpl, slot.color || 'inkSub')
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+
+  var x = slot.x * W
+  var y0 = slot.y * H
+  for (var i = 0; i < chars.length; i++) {
+    ctx.fillText(chars[i], x, y0 + i * step)
+  }
+
+  return {
+    size: size,
+    step: step,
+    count: chars.length,
+    top: y0,
+    bottom: y0 + (chars.length - 1) * step,
+    x: x
+  }
+}
+
+/**
+ * 密码行：与 SSID 同一层级，但数值部分是等宽字体。
+ *   type === 'nopass' → 「无需密码」
+ *   无密码且非 nopass → 不画（避免出现「密码：—」这种半成品）
+ * 前缀「密码：」跟随模板字体，数值走 MONO，两者作为一个整体对齐。
+ */
+function drawPassword (ctx, tpl, slot, data, W, H, M) {
+  if (!slot) return null
+  if (data.showPassword === false) return null
+
+  var prefix = ''
+  var value = ''
+
+  if (data.type === 'nopass') {
+    value = '无需密码'
+  } else {
+    if (!data.password) return null
+    prefix = '密码：'
+    value = String(data.password)
+  }
+
+  var fam = family(tpl)
+  var weight = slot.weight || '400'
+  var baseSize = slot.size * M
+  var maxWidth = slot.maxW * W
+
+  function widthOf (p, v, size) {
+    var a = p ? measureText(ctx, p, size, weight, fam) : 0
+    return a + measureText(ctx, v, size, weight, MONO)
+  }
+
+  var size = baseSize
+  var shrunk = false
+  var floor = Math.max(3, baseSize * 0.62)
+  var total = widthOf(prefix, value, size)
+
+  while (total > maxWidth && size > floor) {
+    size = Math.max(floor, size * Math.min(0.96, maxWidth / total))
+    total = widthOf(prefix, value, size)
+    shrunk = true
+  }
+
+  var truncated = false
+  if (total > maxWidth && value.length > 1) {
+    var cut = value
+    while (cut.length > 1 && widthOf(prefix, cut + '…', size) > maxWidth) {
+      cut = cut.slice(0, -1)
+    }
+    value = cut + '…'
+    total = widthOf(prefix, value, size)
+    truncated = true
+  }
+
+  var prefixW = prefix ? measureText(ctx, prefix, size, weight, fam) : 0
+  var anchorX = slot.x * W
+  var startX = slot.align === 'left' ? anchorX
+    : slot.align === 'right' ? anchorX - total
+      : anchorX - total / 2
+  var y = slot.y * H
+  var fill = color(tpl, slot.color || 'ink')
+
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+
+  if (prefix) {
+    setFont(ctx, size, weight, fam)
+    ctx.fillStyle = fill
+    ctx.fillText(prefix, startX, y)
+  }
+
+  setFont(ctx, size, weight, MONO)
+  ctx.fillStyle = fill
+  ctx.fillText(value, startX + prefixW, y)
+
+  return {
+    size: size,
+    width: total,
+    prefix: prefix,
+    value: value,
+    mono: true,
+    shrunk: shrunk,
+    truncated: truncated,
+    x: startX,
+    y: slot.y
+  }
+}
+
 /* ── 主流程 ─────────────────────────────────────────────── */
 
 /**
@@ -497,6 +746,7 @@ function renderSign (ctx, template, data, width, height) {
 
   var shopMeta = drawSlot(ctx, tpl, slots.shop, d.shopName, W, H, M, 0.5)
   drawSlot(ctx, tpl, slots.eyebrow, copy.eyebrow, W, H, M, 0.9)
+  var verticalMeta = drawVertical(ctx, tpl, slots.vertical, copy.vertical, W, H, M)
 
   // 二维码：白色托底 + drawQRCode 自带的 4 模块静区
   var qrSlot = slots.qr
@@ -521,6 +771,7 @@ function renderSign (ctx, template, data, width, height) {
   })
 
   var ssidMeta = drawSlot(ctx, tpl, slots.ssid, d.ssid, W, H, M, 0.42)
+  var pwdMeta = drawPassword(ctx, tpl, slots.pwd, d, W, H, M)
   drawSlot(ctx, tpl, slots.hint, copy.hint, W, H, M, 0.72)
 
   ctx.restore()
@@ -539,7 +790,9 @@ function renderSign (ctx, template, data, width, height) {
       moduleMm: 0
     },
     shop: shopMeta,
-    ssid: ssidMeta
+    ssid: ssidMeta,
+    pwd: pwdMeta,
+    vertical: verticalMeta
   }
 }
 
@@ -549,5 +802,10 @@ module.exports = {
   measureText: measureText,
   measureTracked: measureTracked,
   setFont: setFont,
+  drawPassword: drawPassword,
+  drawVertical: drawVertical,
+  SANS: SANS,
+  SERIF: SERIF,
+  MONO: MONO,
   QR_QUIET: QR_QUIET
 }

@@ -38,7 +38,7 @@ Page({
     matchCount: 0,
     total: 0,
     drawer: false,
-    version: '0.3.0'
+    version: '0.4.0'
   },
 
   onLoad: function () {
@@ -103,7 +103,7 @@ Page({
         name: tpl.name,
         shape: tpl.shape,
         region: tpl.region,
-        sceneLabel: lib.getScene(tpl.scene).label,
+        sceneLabel: lib.sceneText(tpl),
         printsText: lib.printText(tpl),
         thumbW: box.width,
         thumbH: box.height
@@ -153,6 +153,9 @@ Page({
           render.renderSign(ctx, tpl, {
             shopName: SAMPLE.shopName,
             ssid: SAMPLE.ssid,
+            password: SAMPLE.password,
+            type: SAMPLE.type,
+            showPassword: true,
             payload: that.payload
           }, w, h)
         }
@@ -186,6 +189,14 @@ Page({
 
   resetFilters: function () {
     this.filterState = filterLib.clone(filterLib.DEFAULT_FILTERS)
+    this.refreshFilters()
+    this.applyList()
+    filterLib.save(this.filterState)
+  },
+
+  /** 空结果时的捷径：只清形状与尺寸筛选，保留场景与偏好 */
+  clearHardFilters: function () {
+    this.filterState = filterLib.clearHard(this.filterState)
     this.refreshFilters()
     this.applyList()
     filterLib.save(this.filterState)

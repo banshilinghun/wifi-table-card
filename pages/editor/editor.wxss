@@ -192,3 +192,44 @@
   line-height: 1.65;
   color: #474c54;
 }
+
+/* ── 显示密码开关 ─────────────────────────────────────── */
+
+.sw {
+  position: relative;
+  width: 82rpx;
+  height: 46rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1rpx solid var(--line-strong);
+  transition: background 0.18s ease;
+}
+
+.sw-knob {
+  position: absolute;
+  top: 5rpx;
+  left: 5rpx;
+  width: 34rpx;
+  height: 34rpx;
+  border-radius: 50%;
+  background: var(--text-3);
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.sw-on {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: var(--accent);
+}
+
+.sw-on .sw-knob {
+  transform: translateX(36rpx);
+  background: var(--accent);
+}
+
+.field-note {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 20rpx;
+  line-height: 1.6;
+  color: var(--text-3);
+}
