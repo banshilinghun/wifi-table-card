@@ -1,0 +1,83 @@
+<view class="page">
+  <view class="preview-card">
+    <canvas
+      type="2d"
+      id="preview"
+      class="preview"
+      style="width:{{previewW}}rpx;height:{{previewH}}rpx"
+    ></canvas>
+    <view class="preview-tag">{{tplName}}</view>
+  </view>
+
+  <view class="form">
+    <view class="field">
+      <text class="label">店名</text>
+      <input
+        class="input"
+        value="{{shopName}}"
+        maxlength="12"
+        placeholder="例如：拾光咖啡"
+        placeholder-class="ph"
+        bindinput="onShopInput"
+      />
+    </view>
+
+    <view class="field">
+      <view class="label-row">
+        <text class="label">Wi-Fi 名称</text>
+        <text class="counter {{ssidBytes > 32 ? 'counter-over' : ''}}">{{ssidBytes}}/32 字节</text>
+      </view>
+      <input
+        class="input"
+        value="{{ssid}}"
+        maxlength="32"
+        placeholder="例如：Shiguang-Cafe"
+        placeholder-class="ph"
+        bindinput="onSsidInput"
+      />
+    </view>
+
+    <view class="field" wx:if="{{type !== 'nopass'}}">
+      <view class="label-row">
+        <text class="label">密码</text>
+        <text class="toggle" bindtap="togglePwd">{{showPwd ? '隐藏' : '显示'}}</text>
+      </view>
+      <input
+        class="input"
+        value="{{password}}"
+        password="{{!showPwd}}"
+        maxlength="63"
+        placeholder="至少 8 位"
+        placeholder-class="ph"
+        bindinput="onPwdInput"
+      />
+    </view>
+
+    <view class="field field-last">
+      <text class="label">加密方式</text>
+      <view class="seg">
+        <view
+          wx:for="{{types}}"
+          wx:key="key"
+          class="seg-item {{type === item.key ? 'seg-item-on' : ''}}"
+          data-key="{{item.key}}"
+          bindtap="pickType"
+        >{{item.label}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{!ssidFilled}}" class="hint-line">填写 Wi-Fi 名称后，上方二维码会自动更新</view>
+
+  <view wx:if="{{warnings.length}}" class="warn">
+    <text wx:for="{{warnings}}" wx:key="*this" class="warn-item">· {{item}}</text>
+  </view>
+
+  <view class="status">
+    <text class="status-dot"></text>
+    <text wx:if="{{savedAt}}">已自动保存到本机 · {{savedAt}}</text>
+    <text wx:else>内容会自动保存到本机</text>
+  </view>
+
+  <view class="payload mono">{{payload}}</view>
+</view>

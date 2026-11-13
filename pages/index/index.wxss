@@ -1,5 +1,5 @@
 .hero {
-  padding: 40rpx 8rpx 48rpx;
+  padding: 40rpx 8rpx 44rpx;
 }
 
 .hero-title {
@@ -10,39 +10,67 @@
 
 .hero-sub {
   margin-top: 12rpx;
-  font-size: 28rpx;
+  font-size: 26rpx;
   color: var(--ink-soft);
   letter-spacing: 1rpx;
 }
 
-.block-title {
-  font-size: 30rpx;
-  font-weight: 500;
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -12rpx;
 }
 
-.block-desc {
-  margin-top: 12rpx;
-  font-size: 26rpx;
-  line-height: 1.7;
-  color: var(--ink-soft);
+.cell {
+  width: 50%;
+  box-sizing: border-box;
+  padding: 0 12rpx 32rpx;
 }
 
-.btn {
-  margin-top: 40rpx;
-  background: var(--accent);
-  color: #fff;
+.cell-hover {
+  opacity: 0.82;
+}
+
+.canvas-box {
   border-radius: 12rpx;
-  font-size: 30rpx;
-  line-height: 88rpx;
+  overflow: hidden;
+  box-shadow: 0 6rpx 20rpx rgba(42, 39, 36, 0.09);
 }
 
-.btn::after {
-  border: none;
+.thumb {
+  display: block;
 }
 
-.foot {
-  margin-top: 48rpx;
-  text-align: center;
-  font-size: 22rpx;
+.meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 14rpx 4rpx 0;
+}
+
+.tpl-name {
+  font-size: 27rpx;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.tpl-tag {
+  font-size: 21rpx;
   color: #a29a8d;
+}
+
+.foot-link {
+  margin-top: 24rpx;
+  padding: 28rpx 0;
+  text-align: center;
+  font-size: 25rpx;
+  color: var(--accent);
+  border-top: 1rpx solid var(--line);
+}
+
+.foot-note {
+  padding-bottom: 16rpx;
+  text-align: center;
+  font-size: 21rpx;
+  color: #b3ab9e;
 }
