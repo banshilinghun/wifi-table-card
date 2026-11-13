@@ -18,6 +18,14 @@
       {
         "type": "folder",
         "value": "tools"
+      },
+      {
+        "type": "folder",
+        "value": "docs"
+      },
+      {
+        "type": "file",
+        "value": "README.md"
       }
     ]
   }
