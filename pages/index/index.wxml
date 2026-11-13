@@ -1,0 +1,14 @@
+<view class="page">
+  <view class="hero">
+    <view class="hero-title">Wi-Fi 桌牌</view>
+    <view class="hero-sub">扫码连网，不用再问密码</view>
+  </view>
+
+  <view class="card block">
+    <view class="block-title">当前阶段：二维码内核自测</view>
+    <view class="block-desc">已内置 Wi-Fi 载荷生成与离线二维码编码器，先在测试页验证扫码正确性，再接模板列表与桌牌绘制。</view>
+    <button class="btn" bindtap="goTest">打开二维码测试页</button>
+  </view>
+
+  <view class="foot">全部数据仅存本机 · 无网络请求 · v{{version}}</view>
+</view>

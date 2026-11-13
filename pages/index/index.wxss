@@ -1,0 +1,48 @@
+.hero {
+  padding: 40rpx 8rpx 48rpx;
+}
+
+.hero-title {
+  font-size: 60rpx;
+  font-weight: 500;
+  letter-spacing: 2rpx;
+}
+
+.hero-sub {
+  margin-top: 12rpx;
+  font-size: 28rpx;
+  color: var(--ink-soft);
+  letter-spacing: 1rpx;
+}
+
+.block-title {
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+.block-desc {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+
+.btn {
+  margin-top: 40rpx;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+  line-height: 88rpx;
+}
+
+.btn::after {
+  border: none;
+}
+
+.foot {
+  margin-top: 48rpx;
+  text-align: center;
+  font-size: 22rpx;
+  color: #a29a8d;
+}

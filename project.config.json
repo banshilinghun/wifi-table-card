@@ -1,0 +1,24 @@
+{
+  "appid": "wxbc74fad3d5319f64",
+  "projectname": "wifi-table-card",
+  "compileType": "miniprogram",
+  "description": "Wi-Fi 桌牌：纯本地生成 Wi-Fi 二维码桌牌，无网络请求",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "coverView": true,
+    "nodeModules": false,
+    "showShadowRootInWxmlPanel": true
+  },
+  "packOptions": {
+    "ignore": [
+      {
+        "type": "folder",
+        "value": "tools"
+      }
+    ]
+  }
+}
