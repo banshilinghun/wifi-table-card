@@ -233,3 +233,57 @@
   line-height: 1.6;
   color: var(--text-3);
 }
+
+/* ── 收藏（预览右上角）────────────────────────────────── */
+
+.stage {
+  position: relative;
+}
+
+.fav-fab {
+  position: absolute;
+  top: 28rpx;
+  right: 4rpx;
+  width: 68rpx;
+  height: 68rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1rpx solid var(--line-strong);
+  background: rgba(19, 21, 25, 0.86);
+  z-index: 2;
+}
+
+.fav-fab-on {
+  border-color: rgba(217, 140, 140, 0.55);
+  background: rgba(217, 140, 140, 0.14);
+}
+
+.fav-fab-heart {
+  font-size: 32rpx;
+  line-height: 1;
+  color: var(--text-2);
+}
+
+.fav-fab-on .fav-fab-heart {
+  color: #e08a8a;
+}
+
+/* ── 打印按钮 ─────────────────────────────────────────── */
+
+.btn-print {
+  margin-top: 30rpx;
+  height: 96rpx;
+  line-height: 96rpx;
+  font-size: 30rpx;
+  font-weight: 500;
+  border-radius: 16rpx;
+  color: #14151a;
+  background: var(--accent);
+  border: none;
+}
+
+.btn-print::after {
+  border: none;
+}

@@ -6,7 +6,9 @@
  * 纯内存计算 + 本机存储，不发任何请求。
  */
 
-var lib = require('../templates/index')
+// 走 catalog 而不是 templates/index：场景表里才有白纸系列的新场景，
+// 否则「奶茶咖啡」这类筛选条件在重进小程序后会被 load() 当成脏数据丢掉。
+var lib = require('../templates/catalog')
 var store = require('./store')
 
 var DEFAULT_FILTERS = {
@@ -142,6 +144,13 @@ function chips (f) {
   return out
 }
 
+/** ['a','b'] → {a:1,b:1}，给 pick 做白名单 */
+function toSet (list) {
+  var out = {}
+  ;(list || []).forEach(function (k) { out[k] = 1 })
+  return out
+}
+
 /** 读取本地条件，脏数据一律回落到默认值 */
 function load () {
   var saved = store.getFilters()
@@ -167,8 +176,8 @@ function load () {
     scene: validScene[saved.scene] ? saved.scene : 'all',
     shapes: pick(saved.shapes, validShape),
     prints: pick(saved.prints, validPrint),
-    moods: pick(saved.moods, { '自然': 1, '都市': 1, '传统': 1, '温馨': 1 }),
-    regions: pick(saved.regions, { '新中式': 1, '日式': 1, '韩式': 1, '欧式': 1, '极简': 1 })
+    moods: pick(saved.moods, toSet(lib.MOODS)),
+    regions: pick(saved.regions, toSet(lib.REGIONS))
   }
 }
 

@@ -1,0 +1,92 @@
+<view class="page print-page">
+  <view class="stage">
+    <canvas type="2d" id="sheet" class="sheet" style="width:{{canvasW}}px;height:{{canvasH}}px"></canvas>
+  </view>
+
+  <view class="stage-meta">
+    <text class="stage-name">{{tplName}}</text>
+    <text class="stage-sep">·</text>
+    <text class="stage-info">{{planInfo}}</text>
+  </view>
+
+  <view class="tags">
+    <view class="tag {{qrLabel === '小型二维码' ? 'tag-warn' : 'tag-ok'}}">{{qrLabel}}</view>
+    <view class="tag">A4 · {{orientation === 'portrait' ? '竖向' : '横向'}}</view>
+  </view>
+
+  <view class="warn" wx:if="{{warn}}">{{warn}}</view>
+
+  <view class="group">
+    <view class="group-head">
+      <text class="group-title">版式</text>
+      <text class="group-note">份数多时二维码会自动变小</text>
+    </view>
+    <view class="opts">
+      <view
+        class="opt {{layout === item.key ? 'opt-on' : ''}} {{item.usable ? '' : 'opt-off'}}"
+        wx:for="{{layouts}}"
+        wx:key="key"
+        data-key="{{item.key}}"
+        bindtap="pickLayout"
+      >
+        <text class="opt-name">{{item.label}}</text>
+        <text class="opt-note">{{item.count}} 份 · {{item.grid}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="group">
+    <view class="group-head">
+      <text class="group-title">纸张</text>
+    </view>
+    <view class="seg">
+      <view class="seg-item {{orientation === 'portrait' ? 'seg-item-on' : ''}}" data-v="portrait" bindtap="pickOrientation">A4 竖向</view>
+      <view class="seg-item {{orientation === 'landscape' ? 'seg-item-on' : ''}}" data-v="landscape" bindtap="pickOrientation">A4 横向</view>
+    </view>
+  </view>
+
+  <view class="group">
+    <view class="group-head">
+      <text class="group-title">裁切线</text>
+    </view>
+    <view class="seg seg-4">
+      <view
+        class="seg-item {{cut === item.key ? 'seg-item-on' : ''}}"
+        wx:for="{{cuts}}"
+        wx:key="key"
+        data-key="{{item.key}}"
+        bindtap="pickCut"
+      >{{item.label}}</view>
+    </view>
+  </view>
+
+  <view class="switch-row">
+    <view class="switch-text">
+      <text class="switch-label">窄边距</text>
+      <text class="switch-note">{{narrow ? '每份四周留 4mm，能多塞一点' : '每份四周留 8mm，好裁不切到字'}}</text>
+    </view>
+    <switch checked="{{narrow}}" color="#d9c08c" bindchange="toggleNarrow" />
+  </view>
+
+  <view class="tip">
+    <view class="tip-dot"></view>
+    <text>{{tip}}</text>
+  </view>
+
+  <button class="btn-primary" bindtap="exportSheet" loading="{{exporting}}" disabled="{{exporting}}">
+    {{exporting ? '正在导出…' : '导出 A4 高清图'}}
+  </button>
+
+  <view class="out" wx:if="{{outPath}}">
+    <image class="out-img" src="{{outPath}}" mode="widthFix" bindtap="previewFull" />
+    <view class="out-meta">
+      <text class="out-info">{{outInfo}}</text>
+      <text class="out-hint">点图可放大检查裁切线</text>
+    </view>
+    <view class="out-actions">
+      <button class="btn-ghost" bindtap="saveAlbum">保存到相册</button>
+      <button class="btn-ghost" bindtap="shareImage">发给好友</button>
+    </view>
+    <text class="out-note">也可以发给「文件传输助手」，在电脑上直接打开打印</text>
+  </view>
+</view>

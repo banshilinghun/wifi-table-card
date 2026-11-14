@@ -8,14 +8,20 @@
           <text class="mast-count">{{matchCount}} / {{total}}</text>
         </view>
       </view>
-      <view class="filter-btn {{activeCount ? 'filter-btn-on' : ''}}" bindtap="openDrawer">
-        <view class="ico ico-filter">
-          <view class="ico-i a"></view>
-          <view class="ico-i b"></view>
-          <view class="ico-i c"></view>
+      <view class="mast-right">
+        <view class="fav-entry {{favOnly ? 'fav-entry-on' : ''}}" bindtap="toggleFavOnly">
+          <text class="fav-heart">{{favOnly ? '♥' : '♡'}}</text>
+          <text class="fav-count" wx:if="{{favCount}}">{{favCount}}</text>
         </view>
-        <text class="filter-txt">筛选</text>
-        <view class="filter-badge" wx:if="{{activeCount}}">{{activeCount}}</view>
+        <view class="filter-btn {{activeCount ? 'filter-btn-on' : ''}}" bindtap="openDrawer">
+          <view class="ico ico-filter">
+            <view class="ico-i a"></view>
+            <view class="ico-i b"></view>
+            <view class="ico-i c"></view>
+          </view>
+          <text class="filter-txt">筛选</text>
+          <view class="filter-badge" wx:if="{{activeCount}}">{{activeCount}}</view>
+        </view>
       </view>
     </view>
 
@@ -53,53 +59,89 @@
     </view>
 
     <!-- 缩略图是离屏 canvas 画好后转出来的图片，页面里不再挂 canvas 节点 -->
-    <view class="grid">
-      <view
-        class="cell"
-        wx:for="{{list}}"
-        wx:key="id"
-        data-id="{{item.id}}"
-        bindtap="openEditor"
-        hover-class="cell-hover"
-        hover-stay-time="60"
-      >
-        <view class="thumb-box">
-          <view
-            class="thumb-ph"
-            wx:if="{{!item.img}}"
-            style="width:{{item.thumbW}}rpx;height:{{item.thumbH}}rpx;background:{{item.tint}}"
-          ></view>
-          <image
-            wx:else
-            class="thumb"
-            src="{{item.img}}"
-            mode="aspectFit"
-            style="width:{{item.thumbW}}rpx;height:{{item.thumbH}}rpx"
-          />
-        </view>
-        <view class="cell-meta">
-          <text class="cell-name">{{item.name}}</text>
-          <text class="cell-shape">{{item.shape}}</text>
-        </view>
-        <text class="cell-prints">{{item.printsText}} · {{item.region}}</text>
+    <block wx:for="{{groups}}" wx:for-item="group" wx:key="key">
+      <view class="series-head">
+        <text class="series-title">{{group.title}}</text>
+        <text class="series-count">{{group.items.length}}</text>
       </view>
-    </view>
 
-    <view class="empty" wx:if="{{!list.length}}">
-      <text class="empty-title">没有符合的模板</text>
-      <text class="empty-sub">形状与打印尺寸是过滤条件，两者交叉后没有结果。清掉这两项，场景与偏好会保留。</text>
-      <view class="empty-btn" bindtap="clearHardFilters">清除形状/尺寸筛选</view>
-      <text class="empty-alt" bindtap="resetFilters">重置全部条件</text>
+      <view class="grid">
+        <view
+          class="cell"
+          wx:for="{{group.items}}"
+          wx:key="id"
+          data-id="{{item.id}}"
+          bindtap="openEditor"
+          hover-class="cell-hover"
+          hover-stay-time="60"
+        >
+          <view class="thumb-box">
+            <view
+              class="thumb-ph"
+              wx:if="{{!item.img}}"
+              style="width:{{item.thumbW}}rpx;height:{{item.thumbH}}rpx;background:{{item.tint}}"
+            ></view>
+            <image
+              wx:else
+              class="thumb"
+              src="{{item.img}}"
+              mode="aspectFit"
+              style="width:{{item.thumbW}}rpx;height:{{item.thumbH}}rpx"
+            />
+            <view
+              class="cell-fav {{item.fav ? 'cell-fav-on' : ''}}"
+              data-id="{{item.id}}"
+              catchtap="toggleFav"
+            >{{item.fav ? '♥' : '♡'}}</view>
+          </view>
+          <view class="cell-meta">
+            <text class="cell-name">{{item.name}}</text>
+            <text class="cell-shape">{{item.shape}}</text>
+          </view>
+          <text class="cell-prints">{{item.printsText}} · {{item.region}}</text>
+        </view>
+      </view>
+    </block>
+
+    <view class="empty" wx:if="{{!groups.length}}">
+      <text class="empty-title">{{favOnly ? '还没有收藏' : '没有符合的模板'}}</text>
+      <text class="empty-sub" wx:if="{{favOnly}}">点模板右上角的 ♡ 就能收藏，收藏只存在这台手机上。</text>
+      <text class="empty-sub" wx:else>形状与打印尺寸是过滤条件，两者交叉后没有结果。清掉这两项，场景与偏好会保留。</text>
+      <view class="empty-btn" wx:if="{{favOnly}}" bindtap="toggleFavOnly">看全部模板</view>
+      <view class="empty-btn" wx:else bindtap="clearHardFilters">清除形状/尺寸筛选</view>
+      <text class="empty-alt" wx:if="{{!favOnly}}" bindtap="resetFilters">重置全部条件</text>
     </view>
 
     <view class="foot">
       <view class="foot-link" bindtap="goTest">二维码内核自检 ›</view>
-      <text class="foot-note">全部数据仅存本机 · 无网络请求 · v{{version}}</text>
+      <view class="privacy" bindtap="showPrivacy">
+        <text class="privacy-line">数据只存在这台手机上，不联网、不上传</text>
+        <text class="privacy-more">隐私说明 ›</text>
+      </view>
+      <text class="foot-note">v{{version}}</text>
+    </view>
+  </view>
+
+  <!-- 隐私说明：展开式，不跳页 -->
+  <view class="p-mask" wx:if="{{privacy}}" bindtap="closePrivacy" catchtouchmove="noop"></view>
+  <view class="p-panel {{privacy ? 'p-panel-on' : ''}}" catchtouchmove="noop">
+    <view class="p-head">
+      <text class="p-title">隐私说明</text>
+      <view class="p-close" bindtap="closePrivacy">×</view>
+    </view>
+    <scroll-view class="p-body" scroll-y="true">
+      <view class="p-item" wx:for="{{privacyLines}}" wx:key="h">
+        <text class="p-h">{{item.h}}</text>
+        <text class="p-t">{{item.t}}</text>
+      </view>
+    </scroll-view>
+    <view class="p-foot">
+      <text class="p-foot-note">生效日期 2026-11-15</text>
+      <view class="p-btn" bindtap="closePrivacy">知道了</view>
     </view>
   </view>
 
   <view class="mask" wx:if="{{drawer}}" bindtap="closeDrawer" catchtouchmove="noop"></view>
-
   <view class="drawer {{drawer ? 'drawer-on' : ''}}" catchtouchmove="noop">
     <view class="grip"></view>
 

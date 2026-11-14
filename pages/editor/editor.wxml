@@ -6,6 +6,9 @@
       class="preview"
       style="width:{{previewW}}rpx;height:{{previewH}}rpx"
     ></canvas>
+    <view class="fav-fab {{fav ? 'fav-fab-on' : ''}}" bindtap="toggleFav">
+      <text class="fav-fab-heart">{{fav ? '♥' : '♡'}}</text>
+    </view>
   </view>
 
   <view class="stage-meta">
@@ -82,6 +85,16 @@
       </view>
     </view>
 
+    <view class="field" wx:if="{{isPaper}}">
+      <view class="label-row">
+        <text class="label">侧边竖排小字</text>
+        <view class="sw {{showVertical ? 'sw-on' : ''}}" bindtap="toggleVertical">
+          <view class="sw-knob"></view>
+        </view>
+      </view>
+      <text class="field-note">{{showVertical ? '右侧竖排一行「模板名」，窄牌上建议关掉' : '已关闭，右侧留白'}}</text>
+    </view>
+
     <view class="field field-last">
       <view class="label-row">
         <text class="label">打印尺寸</text>
@@ -116,6 +129,8 @@
     <text wx:if="{{savedAt}}">已自动保存到本机 · {{savedAt}}</text>
     <text wx:else>内容会自动保存到本机</text>
   </view>
+
+  <button class="btn-print" bindtap="goPrint">打印预览 · A4 拼版</button>
 
   <view class="payload mono">{{payload}}</view>
 </view>
