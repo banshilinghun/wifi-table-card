@@ -12,19 +12,13 @@
  */
 
 var qrCanvas = require('./qr-canvas')
+var ornament = require('./ornament')
 
 var SANS = '-apple-system, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif'
 var SERIF = '"Songti SC", "STSong", "Times New Roman", "SimSun", serif'
 var MONO = '"SF Mono", "Menlo", "Consolas", "Courier New", monospace'
 
 var QR_QUIET = 4
-
-/**
- * 成品短边小于这个值（mm）时，第三行提示语不上牌：
- * 60×60 的迷你方牌上，密码要占到 2.8mm（短边的 4.7%），
- * 再塞一行 ≥2mm 的提示语就会与密码行贴在一起。宁可少一行字，也不缩字号。
- */
-var HINT_MIN_SHORT_MM = 80
 
 /* ── 基础工具 ───────────────────────────────────────────── */
 
@@ -544,6 +538,21 @@ function drawMotifs (ctx, tpl, W, H, M) {
         break
       }
 
+      case 'fleuron': {
+        /* 公有领域花饰：资产是纯 alpha 剪影，颜色在这里按模板染。
+           图没预加载完就跳过——这一层是装饰，缺了不影响可读性，
+           但绝不允许为了等图把同步绘制改成异步。 */
+        var oInfo = ornament.getOrnament(m.key)
+        if (!oInfo) break
+        var ow = m.w * W
+        var oh = ow / (oInfo.aspect || 1)
+        if (m.h * H < oh) { oh = m.h * H; ow = oh * (oInfo.aspect || 1) }
+        var ox = m.x * W - ow / 2
+        var oy = m.y * H - oh / 2
+        ornament.draw(ctx, m.key, color(tpl, m.color), ox, oy, ow, oh, m.alpha)
+        break
+      }
+
       default:
         break
     }
@@ -600,13 +609,14 @@ function drawSlot (ctx, tpl, slot, text, W, H, M, defaultMinScale) {
   fitted.x = slot.x
   fitted.y = slot.y
   fitted.align = slot.align || 'center'
+  /* base 是给校验器算「缩了多少」用的，绘制不读它 */
+  fitted.base = baseSize
   return fitted
 }
 
 /**
  * 竖排小字（日式）：逐字向下叠放，字距由 step 控制。
  * 每个字单独测量，emoji 或全角字符不会互相挤压。
- * slot.alpha 用来压一点亮度，既保住对比度又不抢正文。
  */
 function drawVertical (ctx, tpl, slot, text, W, H, M) {
   if (!slot || !text) return null
@@ -616,9 +626,7 @@ function drawVertical (ctx, tpl, slot, text, W, H, M) {
   var step = (slot.step || slot.size * 1.5) * M
   var chars = splitChars(text)
 
-  ctx.save()
-  ctx.globalAlpha = slot.alpha == null ? 1 : slot.alpha
-  setFont(ctx, size, slot.weight || '400', fam)
+  setFont(ctx, size, 400, fam)
   ctx.fillStyle = color(tpl, slot.color || 'inkSub')
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
@@ -628,13 +636,11 @@ function drawVertical (ctx, tpl, slot, text, W, H, M) {
   for (var i = 0; i < chars.length; i++) {
     ctx.fillText(chars[i], x, y0 + i * step)
   }
-  ctx.restore()
 
   return {
     size: size,
     step: step,
     count: chars.length,
-    alpha: slot.alpha == null ? 1 : slot.alpha,
     top: y0,
     bottom: y0 + (chars.length - 1) * step,
     x: x
@@ -717,6 +723,7 @@ function drawPassword (ctx, tpl, slot, data, W, H, M) {
 
   return {
     size: size,
+    base: baseSize,
     width: total,
     prefix: prefix,
     value: value,
@@ -731,34 +738,12 @@ function drawPassword (ctx, tpl, slot, data, W, H, M) {
 /* ── 主流程 ─────────────────────────────────────────────── */
 
 /**
- * 可隐藏槽位（目前只有提示语）的取舍：返回空串表示照常画，否则返回放弃的原因。
- * 三条都是「空间不够」的量化判据，不靠调参：
- *   short-side  成品短边 < 80mm（迷你 60×60），高度让给密码
- *   pwd-gap     与密码行的基线间距 < 两行字高之和的 0.62（上下各留 ~12% 空隙）
- *   bottom      压到成品底部 3% 以内
- */
-function hintSkipReason (slot, pwd, mm, W, H, M) {
-  if (!slot || slot.optional === false) return ''
-
-  var shortMm = mm && mm.w && mm.h ? Math.min(mm.w, mm.h) : 0
-  if (shortMm && shortMm < HINT_MIN_SHORT_MM) return 'short-side'
-
-  var size = slot.size * M
-  if (pwd && (slot.y - pwd.y) * H < (pwd.size + size) * 0.62) return 'pwd-gap'
-  if (slot.y * H + size * 0.62 > H - M * 0.03) return 'bottom'
-  return ''
-}
-
-/**
  * @param {CanvasRenderingContext2D} ctx
  * @param {object} template templates/index.js 中的一项
- * @param {{shopName?:string, ssid?:string, password?:string, payload?:string,
- *          showPassword?:boolean, type?:string, mm?:{w:number,h:number}}} data
- *        mm 为成品物理尺寸，缺省时仅按几何关系判断提示语去留
+ * @param {{shopName?:string, ssid?:string, password?:string, payload?:string}} data
  * @param {number} width  逻辑宽度（预览与导出只改这里）
  * @param {number} height 逻辑高度
- * @returns {{width:number,height:number,qr:object,shop:object,ssid:object,
- *            pwd:object,vertical:object,hint:object,hintSkipped:string}}
+ * @returns {{width:number,height:number,qr:object,shop:object,ssid:object}}
  */
 function renderSign (ctx, template, data, width, height) {
   var tpl = template
@@ -806,9 +791,7 @@ function renderSign (ctx, template, data, width, height) {
 
   var ssidMeta = drawSlot(ctx, tpl, slots.ssid, d.ssid, W, H, M, 0.42)
   var pwdMeta = drawPassword(ctx, tpl, slots.pwd, d, W, H, M)
-
-  var hintSkip = hintSkipReason(slots.hint, pwdMeta, d.mm, W, H, M)
-  var hintMeta = hintSkip ? null : drawSlot(ctx, tpl, slots.hint, copy.hint, W, H, M, 0.72)
+  drawSlot(ctx, tpl, slots.hint, copy.hint, W, H, M, 0.72)
 
   ctx.restore()
 
@@ -828,9 +811,7 @@ function renderSign (ctx, template, data, width, height) {
     shop: shopMeta,
     ssid: ssidMeta,
     pwd: pwdMeta,
-    vertical: verticalMeta,
-    hint: hintMeta,
-    hintSkipped: hintSkip
+    vertical: verticalMeta
   }
 }
 
@@ -842,10 +823,8 @@ module.exports = {
   setFont: setFont,
   drawPassword: drawPassword,
   drawVertical: drawVertical,
-  hintSkipReason: hintSkipReason,
   SANS: SANS,
   SERIF: SERIF,
   MONO: MONO,
-  QR_QUIET: QR_QUIET,
-  HINT_MIN_SHORT_MM: HINT_MIN_SHORT_MM
+  QR_QUIET: QR_QUIET
 }

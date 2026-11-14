@@ -1,7 +1,8 @@
-var lib = require('../../templates/index')
+var lib = require('../../templates/library')
 var render = require('../../utils/render')
 var wifi = require('../../utils/wifi')
 var store = require('../../utils/store')
+var ornament = require('../../utils/ornament')
 
 var TYPES = [
   { key: 'WPA', label: 'WPA/WPA2' },
@@ -15,7 +16,7 @@ var PREVIEW_MAX_H = 700
 
 function getDpr () {
   try {
-    var info = wx.getWindowInfo()
+    var info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
     return info.pixelRatio || 2
   } catch (e) {
     return 2
@@ -73,15 +74,16 @@ Page({
     var settings = store.getSettings() || {}
     var tplId = (query && query.tpl) || settings.lastTplId || 'night-berth'
 
-    this.template = lib.getTemplate(tplId)
+    /* 工厂模板不在 templates/index 里，得走 library 的两段查找；
+       找不到（比如老草稿存了个已下线的 id）才回落到精选第一套。 */
+    this.template = lib.find(tplId) || lib.getTemplate(tplId)
 
     // 表单实时值放在实例上，避免每次输入都 setData 造成光标跳动
     this.form = { shopName: '', ssid: '', password: '', type: 'WPA' }
     this.showPassword = true
 
     var draft = store.getDraft()
-    // 多种规格时默认整页 A4（大尺寸先看整体版式），只有一种就按它来
-    var printKey = this.template.prints.indexOf('a4') !== -1 ? 'a4' : this.template.prints[0]
+    var printKey = this.template.prints[0]
     if (draft && draft.tplId === this.template.id) {
       if (typeof draft.shopName === 'string') this.form.shopName = draft.shopName
       if (typeof draft.ssid === 'string') this.form.ssid = draft.ssid
@@ -249,9 +251,17 @@ Page({
     if (ok) this.setData({ savedAt: timeLabel() })
   },
 
+  /**
+   * 花饰是图片资产，必须先解码再画。ensure 内部有缓存，
+   * 同一模板第二次调用是同步级别的开销，所以 debounce 里调它没问题。
+   */
   render: function () {
     var that = this
-    var print = lib.getPrint(this.printKey)
+    ornament.ensure([this.template]).then(function () { that.paint() })
+  },
+
+  paint: function () {
+    var that = this
 
     wx.createSelectorQuery()
       .in(this)
@@ -281,9 +291,7 @@ Page({
           password: that.form.password,
           type: that.form.type,
           showPassword: that.showPassword,
-          payload: that.payload,
-          // 成品物理尺寸：提示语放不放得下按真实毫米判断，预览与打印一致
-          mm: { w: print.w, h: print.h }
+          payload: that.payload
         }, w, h)
 
         console.log('[editor] ' + that.template.id + ' / ' + that.printKey +
@@ -291,7 +299,6 @@ Page({
           ' qr=' + meta.qr.moduleCount + '模块' +
           (meta.ssid ? ' ssid字号=' + meta.ssid.size.toFixed(1) + (meta.ssid.shrunk ? '(已缩小)' : '') : '') +
           (meta.pwd ? ' 密码=' + meta.pwd.value + '(' + meta.pwd.size.toFixed(1) + 'px 等宽)' : ' 无密码行') +
-          (meta.hintSkipped ? ' 提示语隐藏(' + meta.hintSkipped + ')' : '') +
           (meta.ssid && meta.ssid.truncated ? '(已截断)' : ''))
       })
   }

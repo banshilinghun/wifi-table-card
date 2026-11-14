@@ -11,7 +11,7 @@ var DEMO_ORDER = ['en', 'zh']
 
 function windowInfo () {
   try {
-    return wx.getWindowInfo()
+    return wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
   } catch (e) {
     return { windowWidth: 375, pixelRatio: 2 }
   }

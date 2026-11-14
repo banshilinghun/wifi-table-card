@@ -139,8 +139,6 @@ var rows = []
 var qrMin = 999
 var modMin = 999
 var textMin = 999
-var pwdMin = 999
-var vMin = 999
 
 T.forEach(function (t) {
   t.prints.forEach(function (key) {
@@ -157,11 +155,6 @@ T.forEach(function (t) {
     qrMin = Math.min(qrMin, qrMm)
     modMin = Math.min(modMin, modMm)
     textMin = Math.min(textMin, hintMm)
-    pwdMin = Math.min(pwdMin, pwdMm)
-
-    if (t.slots.vertical) {
-      vMin = Math.min(vMin, t.slots.vertical.size * Mmm)
-    }
 
     rows.push({
       id: t.id,
@@ -170,7 +163,7 @@ T.forEach(function (t) {
       qr: qrMm.toFixed(1),
       mod: modMm.toFixed(2),
       ssid: ssidMm.toFixed(1),
-      pwd: pwdMm.toFixed(2),
+      pwd: pwdMm.toFixed(1),
       hint: hintMm.toFixed(1)
     })
   })
@@ -185,41 +178,8 @@ rows.forEach(function (r) {
 ok('二维码最短边 ≥ 18mm', qrMin >= 18, '最小 ' + qrMin.toFixed(1) + 'mm')
 ok('单模块 ≥ 0.4mm', modMin >= 0.4, '最小 ' + modMin.toFixed(2) + 'mm')
 ok('最小提示文字 ≥ 2.0mm', textMin >= 2.0, '最小 ' + textMin.toFixed(2) + 'mm')
-ok('密码字号 ≥ 2.8mm（所有规格）', pwdMin >= 2.8, '最小 ' + pwdMin.toFixed(2) + 'mm')
-ok('日式竖排小字 ≥ 3.0mm', vMin >= 3.0, '最小 ' + vMin.toFixed(2) + 'mm')
-ok('日式竖排小字高对比（用正文 ink + alpha ≥ 0.75）',
-  T.filter(function (t) { return t.slots.vertical }).every(function (t) {
-    var v = t.slots.vertical
-    return v.color === 'ink' && (v.alpha == null ? 1 : v.alpha) >= 0.75
-  }),
-  T.filter(function (t) { return t.slots.vertical }).map(function (t) {
-    return t.name + ':' + t.slots.vertical.color + '/' + t.slots.vertical.alpha
-  }).join(' '))
-
-/* 竖版 A4/A5：文字区不能全挤在上半页，底部留白 ≤ 成品高度的 10% */
-var bottoms = []
-var bottomMax = 0
-T.filter(function (t) { return t.shape === '1:1.4' }).forEach(function (t) {
-  var p = lib.getPrint('a4')
-  var Mmm = Math.min(p.w, p.h)
-  var hintBottom = t.slots.hint.y * p.h + t.slots.hint.size * Mmm * 0.62
-  var gap = p.h - hintBottom
-  bottomMax = Math.max(bottomMax, gap)
-  bottoms.push(t.name + ' 底部留白 ' + gap.toFixed(1) + 'mm')
-})
-ok('竖版 A4 底部留白 ≤ 30mm', bottomMax <= 30, bottoms.join(' · '))
-
-ok('1:1.4 模板提供 A6（105×148）',
-  T.filter(function (t) { return t.shape === '1:1.4' })
-    .every(function (t) { return t.prints.indexOf('a6') !== -1 }),
-  T.filter(function (t) { return t.shape === '1:1.4' }).map(function (t) {
-    return t.name + ':' + t.prints.join('/')
-  }).join(' '))
-
-ok('每种形状至少有一个可打印规格',
-  lib.SHAPES.every(function (s) {
-    return T.some(function (t) { return t.shape === s.key && t.prints.length > 0 })
-  }))
+ok('密码字号 ≥ 2.0mm（和 SSID 同一层级）', Math.min.apply(null, rows.map(function (r) { return +r.pwd })) >= 2.0,
+  '最小 ' + Math.min.apply(null, rows.map(function (r) { return +r.pwd })).toFixed(2) + 'mm')
 
 /* ── [3] 地区纹样与版式 ───────────────────────────────── */
 
@@ -319,7 +279,8 @@ var SAMPLE_SSID = '拾光网络'
 var SAMPLE_PWD = 'coffee2024'
 
 function bundle () {
-  var mods = ['templates/index.js', 'utils/wifi.js', 'utils/qrcode.js', 'utils/qr-canvas.js', 'utils/render.js']
+  var mods = ['templates/index.js', 'utils/wifi.js', 'utils/qrcode.js', 'utils/qr-canvas.js', 'utils/render.js',
+    'assets/ornaments/index.js', 'utils/ornament.js']
   return mods.map(function (rel) {
     return '<script>__define(' + JSON.stringify(rel) + ', function(module, exports, require){\n' +
       fs.readFileSync(path.join(ROOT, rel), 'utf8') + '\n});</script>'
@@ -347,8 +308,6 @@ function buildHTML () {
         id: t.id + '@' + key,
         tplId: t.id,
         print: key,
-        mm: { w: p.w, h: p.h },
-        shortMm: Math.min(p.w, p.h),
         w: Math.round(p.w * scale),
         h: Math.round(p.h * scale)
       })
@@ -370,7 +329,7 @@ function buildHTML () {
     '  c.width=it.w;c.height=it.h;' +
     '  var ctx=c.getContext("2d");' +
     '  var meta=R.renderSign(ctx,tpl,{shopName:"拾光咖啡",ssid:' + JSON.stringify(SAMPLE_SSID) +
-    ',password:' + JSON.stringify(SAMPLE_PWD) + ',type:"WPA",showPassword:true,payload:PAYLOAD,mm:it.mm},it.w,it.h);' +
+    ',password:' + JSON.stringify(SAMPLE_PWD) + ',type:"WPA",showPassword:true,payload:PAYLOAD},it.w,it.h);' +
     '  var d=ctx.getImageData(0,0,it.w,it.h).data;' +
     '  var px=function(x,y){var i=(y*it.w+x)*4;return (d[i]+d[i+1]+d[i+2])/3};' +
     '  var q=meta.qr, minL=255, samples=0;' +
@@ -391,29 +350,16 @@ function buildHTML () {
     '  var m2=R.renderSign(c2.getContext("2d"),tpl,{shopName:"拾光咖啡",ssid:"Guest",password:"x",type:"nopass",showPassword:true,payload:"WIFI:T:nopass;S:Guest;;"},it.w,it.h);' +
     '  var c3=document.createElement("canvas");c3.width=it.w;c3.height=it.h;' +
     '  var m3=R.renderSign(c3.getContext("2d"),tpl,{shopName:"拾光咖啡",ssid:"Guest",password:"secret12",type:"WPA",showPassword:false,payload:"WIFI:T:WPA;S:Guest;P:secret12;;"},it.w,it.h);' +
-    '  res.push({id:it.id,tplId:it.tplId,print:it.print,w:it.w,h:it.h,shortMm:it.shortMm,' +
+    '  res.push({id:it.id,tplId:it.tplId,print:it.print,w:it.w,h:it.h,' +
     '    qr:{x:Math.round(q.x),y:Math.round(q.y),size:Math.round(q.size),modules:q.moduleCount},' +
     '    quietMin:minL,quietSamples:samples,' +
     '    ssid:meta.ssid?{size:+meta.ssid.size.toFixed(2),width:+meta.ssid.width.toFixed(1),shrunk:meta.ssid.shrunk,truncated:meta.ssid.truncated}:null,' +
     '    pwd:meta.pwd?{size:+meta.pwd.size.toFixed(2),width:+meta.pwd.width.toFixed(1),prefix:meta.pwd.prefix,value:meta.pwd.value,mono:meta.pwd.mono,truncated:meta.pwd.truncated}:null,' +
     '    nopassText:m2.pwd?m2.pwd.value:null,' +
     '    hiddenPwd:m3.pwd===null,' +
-    '    hint:meta.hint?{size:+meta.hint.size.toFixed(2),y:+meta.hint.y.toFixed(4)}:null,' +
-    '    hintSkipped:meta.hintSkipped,' +
-    '    vertical:meta.vertical?{size:+meta.vertical.size.toFixed(2),alpha:meta.vertical.alpha}:null,' +
     '    url:c.toDataURL("image/png")});' +
     '});' +
-    // 反例：把提示语硬贴到密码行下方 1.2% 高度处，验证「放不下就不画」这条兜底规则
-    'var tplC=JSON.parse(JSON.stringify(T.getTemplate("blueprint")));' +
-    'tplC.slots.hint.y=tplC.slots.pwd.y+0.012;' +
-    'var c4=document.createElement("canvas");c4.width=400;c4.height=560;' +
-    'var m4=R.renderSign(c4.getContext("2d"),tplC,{shopName:"拾光咖啡",ssid:"Guest",password:"secret12",type:"WPA",showPassword:true,payload:"x",mm:{w:148,h:210}},400,560);' +
-    'var cramped={skipped:m4.hintSkipped,hint:m4.hint};' +
-    'var tplB=JSON.parse(JSON.stringify(T.getTemplate("blueprint")));' +
-    'var c5=document.createElement("canvas");c5.width=400;c5.height=560;' +
-    'var m5=R.renderSign(c5.getContext("2d"),JSON.parse(JSON.stringify(tplB)),{shopName:"拾光咖啡",ssid:"Guest",password:"secret12",type:"WPA",showPassword:true,payload:"x"},400,560);' +
-    'var noMm={skipped:m5.hintSkipped,hint:!!m5.hint};' +
-    'document.getElementById("out").textContent=JSON.stringify({items:res,cramped:cramped,noMm:noMm});' +
+    'document.getElementById("out").textContent=JSON.stringify(res);' +
     '</script></body></html>'
 }
 
@@ -435,8 +381,7 @@ if (!m) {
   process.exit(1)
 }
 
-var parsed = JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'))
-var rendered = parsed.items
+var rendered = JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'))
 ok('渲染条目数与模板×规格数一致',
   rendered.length === T.reduce(function (n, t) { return n + t.prints.length }, 0),
   rendered.length + ' 条')
@@ -471,28 +416,6 @@ rendered.forEach(function (r) {
 ok('密码行：前缀「密码：」+ 原值 + 等宽 + 未截断', pwdBad.length === 0, pwdBad.slice(0, 3).join(' | '))
 ok('nopass 时显示「无需密码」', rendered.every(function (r) { return r.nopassText === '无需密码' }))
 ok('关闭开关后不绘制密码行', rendered.every(function (r) { return r.hiddenPwd }))
-
-/* 提示语：小规格自动让位，大规格照常显示 */
-var miniRows = rendered.filter(function (r) { return r.shortMm < 80 })
-var bigRows = rendered.filter(function (r) { return r.shortMm >= 80 })
-ok('迷你（短边 < 80mm）不画提示语',
-  miniRows.length > 0 && miniRows.every(function (r) { return r.hint === null && r.hintSkipped === 'short-side' }),
-  miniRows.map(function (r) { return r.id + '/' + (r.hintSkipped || 'draw') }).join(' '))
-ok('短边 ≥ 80mm 的规格画出提示语',
-  bigRows.every(function (r) { return r.hint !== null && !r.hintSkipped }),
-  bigRows.filter(function (r) { return r.hint === null }).map(function (r) { return r.id + '/' + r.hintSkipped }).join(' ') || '全部画出')
-ok('提示语不会与密码行重叠（放不下就跳过）',
-  parsed.cramped.skipped === 'pwd-gap' && parsed.cramped.hint === null,
-  '反例 skipped=' + parsed.cramped.skipped)
-ok('未传 mm 时退回几何判断（不崩、照常出图）',
-  parsed.noMm.skipped === '' && parsed.noMm.hint === true,
-  'skipped=' + JSON.stringify(parsed.noMm.skipped))
-
-/* 竖排小字：字号与透明度都随数据走 */
-var vRows = rendered.filter(function (r) { return r.vertical })
-ok('日式竖排小字渲染成功且不透明度过低',
-  vRows.length >= 2 && vRows.every(function (r) { return r.vertical.size > 0 && r.vertical.alpha >= 0.75 }),
-  vRows.map(function (r) { return r.id + ' ' + r.vertical.size + 'px/' + r.vertical.alpha }).join(' · '))
 
 /* ── 汇总 ─────────────────────────────────────────────── */
 

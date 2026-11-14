@@ -5,7 +5,8 @@
         <text class="mast-kicker">WIFI SIGN</text>
         <view class="mast-title-row">
           <text class="mast-title">桌牌</text>
-          <text class="mast-count">{{matchCount}} / {{total}}</text>
+          <text class="mast-count" wx:if="{{totalLabel}}">{{totalLabel}}</text>
+          <text class="mast-count" wx:else>{{matchCount}} / {{total}}</text>
         </view>
       </view>
       <view class="filter-btn {{activeCount ? 'filter-btn-on' : ''}}" bindtap="openDrawer">
@@ -52,7 +53,6 @@
       <text class="chips-clear" bindtap="resetFilters">清空</text>
     </view>
 
-    <!-- 缩略图是离屏 canvas 画好后转出来的图片，页面里不再挂 canvas 节点 -->
     <view class="grid">
       <view
         class="cell"
@@ -64,24 +64,18 @@
         hover-stay-time="60"
       >
         <view class="thumb-box">
-          <view
-            class="thumb-ph"
-            wx:if="{{!item.img}}"
-            style="width:{{item.thumbW}}rpx;height:{{item.thumbH}}rpx;background:{{item.tint}}"
-          ></view>
-          <image
-            wx:else
+          <canvas
+            type="2d"
             class="thumb"
-            src="{{item.img}}"
-            mode="aspectFit"
             style="width:{{item.thumbW}}rpx;height:{{item.thumbH}}rpx"
-          />
+          ></canvas>
         </view>
         <view class="cell-meta">
           <text class="cell-name">{{item.name}}</text>
           <text class="cell-shape">{{item.shape}}</text>
         </view>
         <text class="cell-prints">{{item.printsText}} · {{item.region}}</text>
+        <text class="cell-desc" wx:if="{{item.desc}}">{{item.desc}}</text>
       </view>
     </view>
 
@@ -92,9 +86,16 @@
       <text class="empty-alt" bindtap="resetFilters">重置全部条件</text>
     </view>
 
+    <view class="more" wx:if="{{loading}}">
+      <text class="more-txt">正在排下一批…</text>
+    </view>
+    <view class="more" wx:elif="{{hasMore && list.length}}">
+      <view class="more-btn" bindtap="loadMore">再取 {{pageSize}} 套</view>
+    </view>
+
     <view class="foot">
       <view class="foot-link" bindtap="goTest">二维码内核自检 ›</view>
-      <text class="foot-note">全部数据仅存本机 · 无网络请求 · v{{version}}</text>
+      <text class="foot-note">全部数据仅存本机 · 无网络请求 · 模板由本地工厂生成 · v{{version}}</text>
     </view>
   </view>
 
@@ -113,7 +114,7 @@
       </view>
     </view>
 
-    <scroll-view class="drawer-body" scroll-y="true" enhanced="true" show-scrollbar="false" bounces="false">
+    <scroll-view class="drawer-body" scroll-y="true">
       <view class="group">
         <view class="group-head">
           <text class="group-name">形状</text>
@@ -146,7 +147,7 @@
             bindtap="toggleChip"
           >{{item.label}}</view>
         </view>
-        <text class="group-note">A6 小卡 105×148 · A5 · A4 · 横版 A5 · 长条 200×100 · 竖条 100×200 · 迷你 60×60（mm）—— 每种规格的宽高比都与对应的形状相符</text>
+        <text class="group-note">A4 · A5 · 横版 A5 · 长条 200×100 · 竖条 100×200 · 迷你 60×60（mm）—— 每种规格的宽高比都与对应的形状相符</text>
       </view>
 
       <view class="note">

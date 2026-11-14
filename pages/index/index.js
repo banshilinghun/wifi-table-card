@@ -1,8 +1,9 @@
-var lib = require('../../templates/index')
+var lib = require('../../templates/library')
 var render = require('../../utils/render')
 var wifi = require('../../utils/wifi')
 var filterLib = require('../../utils/filters')
 var store = require('../../utils/store')
+var ornament = require('../../utils/ornament')
 
 // 缩略图统一用同一份示例数据，方便横向对比模板差异
 var SAMPLE = {
@@ -16,81 +17,17 @@ var SAMPLE = {
 var THUMB_MAX_W = 333
 var THUMB_MAX_H = 380
 
-/**
- * 缩略图缓存：模板 id + 尺寸 + dpr → 临时图片路径。
- * 挂在模块上而不是页面实例上——从编辑页返回首页时页面会重建，
- * 但图片还在，不必再画一遍（这也是「来回切筛选不闪」的前提）。
- */
-var thumbCache = {}
-var thumbFailed = {}
+/* 一次画多少张缩略图。每张都是真实 canvas 绘制，
+   一屏超过 30 张在中端机上就会掉帧，所以按页取。 */
+var PAGE = lib.PAGE_SIZE
 
 function getDpr () {
   try {
-    var info = wx.getWindowInfo()
-    // dpr 3 的机型上 333rpx 已经是 519 物理像素，再高只是浪费内存
-    return Math.min(info.pixelRatio || 2, 3)
+    var info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
+    return info.pixelRatio || 2
   } catch (e) {
     return 2
   }
-}
-
-/** 750rpx 设计稿 → 逻辑像素 */
-function rpxScale () {
-  try {
-    var info = wx.getWindowInfo()
-    return (info.windowWidth || 375) / 750
-  } catch (e) {
-    return 0.5
-  }
-}
-
-function thumbKey (id, box) {
-  return id + '@' + box.width + 'x' + box.height + '@' + getDpr()
-}
-
-/**
- * 离屏 canvas 画一张缩略图 → 转临时图片路径。
- * 用 wx.createOffscreenCanvas：不在渲染树里，就没有原生层压住抽屉的问题，
- * 抽屉打开时网格也不必再从渲染树里摘掉。
- */
-function paintThumb (tpl, box, payload) {
-  var dpr = getDpr()
-  var k = rpxScale()
-  var w = Math.max(1, Math.round(box.width * k))
-  var h = Math.max(1, Math.round(box.height * k))
-  var pw = Math.round(w * dpr)
-  var ph = Math.round(h * dpr)
-
-  var print = lib.getPrint((tpl.prints && tpl.prints[0]) || 'a5')
-
-  var canvas = wx.createOffscreenCanvas({ type: '2d', width: pw, height: ph })
-  var ctx = canvas.getContext('2d')
-  ctx.scale(dpr, dpr)
-
-  render.renderSign(ctx, tpl, {
-    shopName: SAMPLE.shopName,
-    ssid: SAMPLE.ssid,
-    password: SAMPLE.password,
-    type: SAMPLE.type,
-    showPassword: true,
-    payload: payload,
-    mm: { w: print.w, h: print.h }
-  }, w, h)
-
-  return new Promise(function (resolve, reject) {
-    wx.canvasToTempFilePath({
-      canvas: canvas,
-      x: 0,
-      y: 0,
-      width: pw,
-      height: ph,
-      destWidth: pw,
-      destHeight: ph,
-      fileType: 'png',
-      success: function (res) { resolve(res.tempFilePath) },
-      fail: reject
-    })
-  })
 }
 
 Page({
@@ -105,7 +42,13 @@ Page({
     list: [],
     matchCount: 0,
     total: 0,
+    /* 有硬条件时分母不可知（工厂按需长，没有预建索引），
+       所以只在无硬条件时显示「N / 970」，否则只显示已取条数 */
+    totalLabel: '',
     drawer: false,
+    loading: false,
+    hasMore: true,
+    pageSize: PAGE,
     version: '0.5.0'
   },
 
@@ -114,73 +57,78 @@ Page({
     this.viewList = []
     this.filterState = filterLib.load()
 
-    this.setData({ total: lib.TEMPLATES.length })
+    /* 库里是「精选 + 工厂」两段：先按估算总量显示，
+       翻到底再决定还有没有下一页。 */
+    this.cursor = 0
+    this.pool = []
+    this.exhausted = false
+
+    this.fill(PAGE * 2)
+    this.setData({ total: lib.estimate(), totalLabel: '' })
     this.refreshFilters()
     this.applyList()
 
-    // 一次性把 10 张缩略图都生成好，之后筛选只重排、不再现画
-    this.buildThumbs()
-
-    console.log('[index] 模板 ' + lib.TEMPLATES.length + ' 个 · 当前条件 ' + JSON.stringify(this.filterState))
+    console.log('[index] 池 ' + this.pool.length + ' / 估算 ' + lib.estimate() + ' · 条件 ' + JSON.stringify(this.filterState))
   },
 
-  /* ── 缩略图 ─────────────────────────────────────── */
+  /**
+   * 把模板池补到 atLeast 条。
+   * 硬条件（形状 / 打印规格 / 场景）直接传给工厂，
+   * 让它只长符合条件的——不是先造一千条再筛。
+   */
+  fill: function (atLeast) {
+    var hard = filterLib.hard(this.filterState)
+    var guard = 0
+    while (this.pool.length < atLeast && !this.exhausted && guard++ < 24) {
+      var batch = lib.get(this.cursor, PAGE, hard)
+      this.cursor += PAGE
+      if (!batch.length) {
+        this.exhausted = true
+        break
+      }
+      this.pool = this.pool.concat(batch)
+    }
+    if (this.cursor >= (lib.MAX_PAGES + 4) * PAGE) this.exhausted = true
+  },
 
-  buildThumbs: function () {
+  /** 条件变了就重开池子：生成器按条件长，旧池子已经不对题了 */
+  refill: function () {
+    this.cursor = 0
+    this.pool = []
+    this.exhausted = false
+    this.fill(PAGE * 2)
+    this.applyList()
+  },
+
+  /** 手动补一批：小程序里 onReachBottom 依赖页面滚动，
+      列表很短时点这个更直接 */
+  loadMore: function () {
+    if (this.exhausted) return
+    var before = this.viewList.length
+    this.fill(this.pool.length + PAGE * 2)
+    if (this.viewList.length === before) this.fill(this.pool.length + PAGE * 4)
+    this.setData({ hasMore: !this.exhausted, total: Math.max(this.viewList.length, this.data.total) })
+  },
+
+  onReachBottom: function () {
+    if (this.exhausted || this.data.loading) return
     var that = this
-    var tpls = lib.TEMPLATES
-    var i = 0
-
-    if (!wx.createOffscreenCanvas) {
-      console.warn('[index] 当前基础库不支持离屏 canvas，缩略图退化为色块占位')
-      return
-    }
-
-    function next () {
-      if (i >= tpls.length) {
-        console.log('[index] 缩略图就绪 ' + Object.keys(thumbCache).length + ' 张')
-        return
-      }
-
-      var tpl = tpls[i++]
-      var box = lib.fitBox(lib.shapeRatio(tpl), THUMB_MAX_W, THUMB_MAX_H)
-      var key = thumbKey(tpl.id, box)
-
-      if (thumbCache[key] || thumbFailed[key]) { next(); return }
-
-      paintThumb(tpl, box, that.payload).then(function (path) {
-        thumbCache[key] = path
-        that.fillImages()
-        next()
-      }).catch(function (err) {
-        // 失败就留色块，不阻塞后面的模板
-        thumbFailed[key] = true
-        console.warn('[index] 缩略图生成失败 ' + tpl.id + ' ' + ((err && err.errMsg) || err))
-        next()
+    this.setData({ loading: true })
+    setTimeout(function () {
+      var before = that.viewList.length
+      that.fill(that.pool.length + PAGE * 2)
+      that.applyList()
+      that.setData({
+        loading: false,
+        hasMore: !that.exhausted,
+        total: Math.max(that.viewList.length, that.data.total)
       })
-    }
-
-    next()
+      if (that.viewList.length === before) that.fill(that.pool.length + PAGE * 3)
+    }, 30)
   },
 
-  /** 只补齐还空着的格子，已经显示出来的图片不动（避免 setData 触发重新加载） */
-  fillImages: function () {
-    var list = this.data.list
-    var patch = {}
-    var n = 0
-
-    for (var i = 0; i < list.length; i++) {
-      if (list[i].img) continue
-      var box = { width: list[i].thumbW, height: list[i].thumbH }
-      var path = thumbCache[thumbKey(list[i].id, box)]
-      if (path) {
-        patch['list[' + i + '].img'] = path
-        list[i].img = path
-        n++
-      }
-    }
-
-    if (n) this.setData(patch)
+  onReady: function () {
+    this.drawThumbs()
   },
 
   /* ── 筛选状态 → 视图 ─────────────────────────────── */
@@ -216,7 +164,9 @@ Page({
   },
 
   applyList: function () {
-    var result = filterLib.apply(lib.TEMPLATES, this.filterState)
+    var that = this
+    /* 池子已按硬条件生成，这里只做偏好排序 + 兜底再过滤一次 */
+    var result = filterLib.apply(this.pool, this.filterState)
     var list = []
 
     this.viewList = result
@@ -228,28 +178,101 @@ Page({
         name: tpl.name,
         shape: tpl.shape,
         region: tpl.region,
-        tint: (tpl.palette && tpl.palette.bg) || '#1A1A1A',
         sceneLabel: lib.sceneText(tpl),
         printsText: lib.printText(tpl),
+        desc: tpl.desc || '',
         thumbW: box.width,
-        thumbH: box.height,
-        // 已生成的直接带上，没有的留空由 fillImages 补
-        img: thumbCache[thumbKey(tpl.id, box)] || ''
+        thumbH: box.height
       })
     })
 
-    this.setData({ list: list, matchCount: list.length })
+    var hard = filterLib.hard(this.filterState)
+    var label = hard.active
+      ? (this.exhausted ? '共 ' + list.length + ' 套' : '已取 ' + list.length + ' 套')
+      : ''
+
+    this.setData({
+      list: list,
+      matchCount: list.length,
+      totalLabel: label,
+      hasMore: !this.exhausted
+    }, function () {
+      that.drawThumbs()
+    })
+  },
+
+  drawThumbs: function () {
+    var that = this
+    var tpls = this.viewList || []
+
+    if (!tpls.length) return
+
+    /* 花饰是图片资产，canvas 画之前必须先解码。
+       ensure 只认当前这批模板用到的 key，加载完再画；
+       失败也照画——花饰缺了不影响网络名和密码的可读性。 */
+    ornament.ensure(tpls).then(function (n) {
+      if (n) console.log('[index] 花饰就绪 ' + n + ' 件')
+      that.paintThumbs()
+    })
+  },
+
+  paintThumbs: function () {
+    var that = this
+    var tpls = this.viewList || []
+    if (!tpls.length) return
+
+    wx.createSelectorQuery()
+      .in(this)
+      .selectAll('.thumb')
+      .fields({ node: true, size: true })
+      .exec(function (res) {
+        var items = (res && res[0]) || []
+
+        if (items.length !== tpls.length) {
+          console.warn('[index] 画布 ' + items.length + ' 个 / 模板 ' + tpls.length + ' 个，数量不一致')
+        }
+
+        var dpr = getDpr()
+
+        for (var i = 0; i < items.length; i++) {
+          var item = items[i]
+          var tpl = tpls[i]
+          if (!item || !item.node || !tpl) continue
+
+          var w = Math.round(item.width)
+          var h = Math.round(item.height)
+          if (!w || !h) continue
+
+          var canvas = item.node
+          var ctx = canvas.getContext('2d')
+
+          canvas.width = Math.round(w * dpr)
+          canvas.height = Math.round(h * dpr)
+          ctx.scale(dpr, dpr)
+
+          render.renderSign(ctx, tpl, {
+            shopName: SAMPLE.shopName,
+            ssid: SAMPLE.ssid,
+            password: SAMPLE.password,
+            type: SAMPLE.type,
+            showPassword: true,
+            payload: that.payload
+          }, w, h)
+        }
+
+        console.log('[index] 缩略图绘制 ' + items.length + ' 个')
+      })
   },
 
   /* ── 交互 ───────────────────────────────────────── */
 
   pickScene: function (e) {
     var key = e.currentTarget.dataset.key
-    if (!key) return
+    if (!key || key === this.filterState.scene) return
 
     this.filterState.scene = key
     this.refreshFilters()
-    this.applyList()
+    this.refill()
     filterLib.save(this.filterState)
   },
 
@@ -260,14 +283,16 @@ Page({
 
     this.filterState[dim] = filterLib.toggle(this.filterState[dim] || [], key)
     this.refreshFilters()
-    this.applyList()
+    /* 氛围 / 地区只是偏好，重排就够；形状 / 打印是硬条件，得重造池子 */
+    if (dim === 'shapes' || dim === 'prints') this.refill()
+    else this.applyList()
     filterLib.save(this.filterState)
   },
 
   resetFilters: function () {
     this.filterState = filterLib.clone(filterLib.DEFAULT_FILTERS)
     this.refreshFilters()
-    this.applyList()
+    this.refill()
     filterLib.save(this.filterState)
   },
 
@@ -275,7 +300,7 @@ Page({
   clearHardFilters: function () {
     this.filterState = filterLib.clearHard(this.filterState)
     this.refreshFilters()
-    this.applyList()
+    this.refill()
     filterLib.save(this.filterState)
   },
 

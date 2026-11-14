@@ -6,7 +6,7 @@
  * 纯内存计算 + 本机存储，不发任何请求。
  */
 
-var lib = require('../templates/index')
+var lib = require('../templates/library')
 var store = require('./store')
 
 var DEFAULT_FILTERS = {
@@ -104,6 +104,26 @@ function apply (list, f) {
   return kept.map(function (item) { return item.tpl })
 }
 
+/**
+ * 抽出「硬条件」交给模板库：形状 / 打印规格 / 场景。
+ * active=false 时库走分页快路径（精选 + 生成页），
+ * 因为那时不需要按条件现长。
+ */
+function hard (f) {
+  var filters = f || DEFAULT_FILTERS
+  var shapes = (filters.shapes || []).slice()
+  var prints = (filters.prints || []).slice()
+  var scene = filters.scene && filters.scene !== 'all' ? filters.scene : null
+  return {
+    shapes: shapes,
+    prints: prints,
+    scene: scene,
+    regions: (filters.regions || []).slice(),
+    densities: (filters.densities || []).slice(),
+    active: !!(shapes.length || prints.length || scene)
+  }
+}
+
 /** 过滤条件是否生效（用于列表为空时的引导文案） */
 function hasHardFilter (f) {
   return (f.shapes && f.shapes.length > 0) || (f.prints && f.prints.length > 0)
@@ -178,6 +198,7 @@ function save (f) {
 
 module.exports = {
   DEFAULT_FILTERS: DEFAULT_FILTERS,
+  hard: hard,
   clone: clone,
   toggle: toggle,
   passes: passes,

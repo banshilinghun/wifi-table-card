@@ -409,8 +409,16 @@ function browserRuntime () {
  *  3. 组装
  * ══════════════════════════════════════════════════════════ */
 
+var LIB = require(path.join(__dirname, '..', 'templates', 'library.js'))
+
 var MODULES = [
   'templates/index.js',
+  'templates/taxonomy.js',
+  'templates/qa.js',
+  'templates/factory.js',
+  'templates/library.js',
+  'assets/ornaments/index.js',
+  'utils/ornament.js',
   'utils/wifi.js',
   'utils/qrcode.js',
   'utils/qr-canvas.js',
@@ -579,6 +587,8 @@ function buildPage (cfg) {
     '<script>' + loader + '</script>' +
     '<script>window.__MP = {}; window.__MP_CONFIG = ' + JSON.stringify(config) + ';' +
     'window.__MP_SCALE = ' + SCALE + ';' +
+    /* 资产按包内绝对路径引用，无头浏览器里要补成 file:// 前缀 */
+    'window.__ORN_PREFIX = ' + JSON.stringify('file://' + ROOT + '/') + ';' +
     'window.__MP_STORAGE = ' + JSON.stringify(cfg.storage || {}) + ';' +
     '(' + browserRuntime.toString() + ')();' +
     'window.__MP.render = (function(){ var f = ' + renderSrc + ';' +
@@ -722,6 +732,31 @@ var SCREENS = [
 
 function main () {
   if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true })
+
+  /* 用生成库第一页里的一条，跑通「工厂模板 → 编辑器」这条路：
+     页面靠 library.find(id) 找回模板，找不到就只能回落精选。 */
+  var gen = LIB.generated(0).filter(function (t) { return t.prints.length > 1 })[0] || LIB.generated(0)[0]
+  if (gen) {
+    SCREENS.push({
+      name: 'editor-generated',
+      route: 'pages/editor/editor',
+      query: { tpl: gen.id },
+      size: [390, 844],
+      storage: {
+        wifi_draft: {
+          tplId: gen.id,
+          printKey: gen.prints[gen.prints.length - 1],
+          shopName: '拾光咖啡',
+          ssid: 'Shiguang-Cafe-Guest-2026',
+          password: 'coffee2026!!',
+          type: 'WPA',
+          showPassword: true,
+          updatedAt: 0
+        }
+      }
+    })
+    console.log('生成模板样本: ' + gen.id + ' ' + gen.name + ' ' + gen.shape + ' ' + gen.prints.join('+'))
+  }
 
   var summary = []
 

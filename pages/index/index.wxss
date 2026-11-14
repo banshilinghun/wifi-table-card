@@ -197,13 +197,6 @@
   box-shadow: 0 14rpx 32rpx rgba(0, 0, 0, 0.55);
 }
 
-/* 图片还没生成好时的占位：用模板自身的底色，不是一块突兀的白 */
-.thumb-ph {
-  display: block;
-  border-radius: 4rpx;
-  opacity: 0.42;
-}
-
 .cell-meta {
   display: flex;
   align-items: center;
@@ -367,15 +360,6 @@
 .drawer-body {
   padding: 6rpx 32rpx 20rpx;
   max-height: 56vh;
-  /* scroll-view 默认 content-box，宽度 100% 再加左右内边距会横向溢出 64rpx */
-  box-sizing: border-box;
-}
-
-/* 部分基础库上 show-scrollbar 不生效，这里再压一道 */
-.drawer-body::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  display: none;
 }
 
 .group {
@@ -392,9 +376,6 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 18rpx;
-  /* 滚动条是覆盖在内容右边缘上的（位置跟着内容盒走，加内边距躲不开），
-     只能让标签自己退 14rpx，否则「过滤」两个字会被压住 */
-  padding-right: 14rpx;
 }
 
 .group-name {
@@ -457,8 +438,7 @@
 }
 
 .note {
-  /* 右边 14rpx 同样是为了避开覆盖式滚动条 */
-  margin: 26rpx 14rpx 4rpx 0;
+  margin: 26rpx 0 4rpx;
   padding: 22rpx 24rpx;
   border-left: 3rpx solid rgba(217, 192, 140, 0.55);
   border-radius: 0 10rpx 10rpx 0;
@@ -500,4 +480,47 @@
   color: #0b0c0e;
   font-size: 26rpx;
   font-weight: 500;
+}
+
+/* ── 生成库：描述行与「再取一批」 ─────────────────────── */
+
+.cell-desc {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: var(--text-3);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+  padding: 28rpx 0 8rpx;
+}
+
+.more-btn {
+  padding: 18rpx 40rpx;
+  border: 1rpx solid var(--line-strong);
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  color: var(--text-2);
+  background: var(--surface);
+}
+
+.more-btn:active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.more-txt {
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+
+.empty-more {
+  margin-top: 24rpx;
+  font-size: 24rpx;
+  color: var(--accent);
 }
