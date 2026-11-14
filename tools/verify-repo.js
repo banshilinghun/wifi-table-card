@@ -2,9 +2,9 @@
  * tools/verify-repo.js —— 数据层验收（Node 侧，用 wx storage 的桩）
  *
  * 守的是「页面不用改就能换数据源」这条承诺：
- *   [1] 草稿读写与规范化（含老结构缺字段）
+ *   [1] 草稿读写与规范化（含老结构缺字段、侧边竖排开关）
  *   [2] 收藏开关幂等、顺序
- *   [3] 作品保存/更新/删除、预留字段
+ *   [3] 作品保存/更新/删除/清空、预留字段
  *   [4] adapter 可替换，且替换后调用方代码不变
  */
 
@@ -41,6 +41,16 @@ function ok (label, cond, detail) {
   var legacy = await repo.getDraft()
   ok('老结构草稿也能读（缺字段补默认）',
     legacy.tplId === 'night-berth' && legacy.type === 'WPA' && legacy.printKey === '')
+  ok('老草稿没有 showVertical 时默认打开', legacy.showVertical === true)
+
+  // 侧边竖排开关：关掉的状态必须跟着草稿走，否则打印页会自己又打开
+  var offDraft = await repo.saveDraft({ tplId: 'paper-milktea', ssid: 'S', showVertical: false })
+  ok('showVertical=false 能存下来', offDraft.showVertical === false)
+  ok('读回仍是关', (await repo.getDraft()).showVertical === false)
+  var onDraft = await repo.saveDraft({ tplId: 'paper-milktea', ssid: 'S', showVertical: true })
+  ok('显式打开能存下来', onDraft.showVertical === true)
+  var noField = await repo.saveDraft({ tplId: 'paper-milktea', ssid: 'S' })
+  ok('不传该字段时回到默认开', noField.showVertical === true)
 
   console.log('[2] 收藏')
   var f0 = await repo.listFavorites()
@@ -80,6 +90,18 @@ function ok (label, cond, detail) {
   ok('删除按 id 生效', (await repo.listWorks()).every(function (w) { return w.id !== w1.id }))
   ok('getWork 取不到已删', (await repo.getWork(w1.id)) === null)
 
+  // 作品里也要记住竖排开关，否则从作品列表点回去状态就丢了
+  var wv = await repo.saveWork({ tplId: 'ember', shopName: '关竖排', showVertical: false })
+  ok('作品存 showVertical=false', wv.showVertical === false)
+  ok('作品读回仍是关', (await repo.getWork(wv.id)).showVertical === false)
+
+  // 「用户能不能删掉存在本机的数据」——这条必须靠 API 成立
+  var beforeClear = (await repo.listWorks()).length
+  ok('清空前有作品', beforeClear > 0, beforeClear + ' 条')
+  await repo.clearWorks()
+  ok('clearWorks 清空全部作品', (await repo.listWorks()).length === 0)
+  ok('clearWorks 不动草稿', (await repo.getDraft()) !== null)
+
   console.log('[4] adapter 可替换')
   var calls = []
   var mock = {
@@ -93,6 +115,7 @@ function ok (label, cond, detail) {
     saveWork: function (w) { return Promise.resolve(w) },
     getWork: function () { return Promise.resolve(null) },
     removeWork: function () { return Promise.resolve(true) },
+    clearWorks: function () { calls.push('clearWorks'); return Promise.resolve(true) },
     getSettings: function () { return Promise.resolve({}) },
     saveSettings: function (p) { return Promise.resolve(p) },
     getFilters: function () { return Promise.resolve(null) },
@@ -103,6 +126,8 @@ function ok (label, cond, detail) {
   var cloudDraft = await repo.getDraft()
   ok('页面同一行调用换到新数据源', cloudDraft.tplId === 'from-cloud', calls.join(','))
   ok('方法名不变（getDraft）', calls.indexOf('getDraft') === 0)
+  await repo.clearWorks()
+  ok('clearWorks 也走 adapter', calls.indexOf('clearWorks') >= 0)
 
   repo.useAdapter(repo.localAdapter)
   ok('切回本地', repo.currentAdapter() === 'local')

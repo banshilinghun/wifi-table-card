@@ -85,6 +85,8 @@ function normalizeDraft (draft) {
     password: d.password || '',
     type: d.type || 'WPA',
     showPassword: d.showPassword !== false,
+    // 侧边竖排开关：编辑页关掉过就得记住，否则打印页会自己又打开
+    showVertical: d.showVertical !== false,
     printKey: d.printKey || '',
     savedAt: d.savedAt || stamp(),
     updatedAt: now()
@@ -107,6 +109,7 @@ function normalizeWork (work) {
     password: w.password || '',
     type: w.type || 'WPA',
     showPassword: w.showPassword !== false,
+    showVertical: w.showVertical !== false,
     printKey: w.printKey || '',
     thumb: w.thumb || '',
     placeNo: w.placeNo || '',
@@ -208,6 +211,16 @@ var localAdapter = {
     return writeRaw(WORKS_KEY, list) ? ok(true) : bad('作品删除失败')
   },
 
+  /** 一次清掉全部作品（本地数据页用） */
+  clearWorks: function () {
+    try {
+      wx.removeStorageSync(WORKS_KEY)
+      return ok(true)
+    } catch (e) {
+      return bad('作品清除失败')
+    }
+  },
+
   getSettings: function () {
     return ok(readRaw(SETTINGS_KEY, {}))
   },
@@ -270,6 +283,7 @@ module.exports = {
   saveWork: function (work) { return call('saveWork', [work]) },
   getWork: function (id) { return call('getWork', [id]) },
   removeWork: function (id) { return call('removeWork', [id]) },
+  clearWorks: function () { return call('clearWorks') },
   // 设置与筛选
   getSettings: function () { return call('getSettings') },
   saveSettings: function (patch) { return call('saveSettings', [patch]) },

@@ -111,26 +111,33 @@ Page({
     favOnly: false,
     favCount: 0,
     privacy: false,
+    draftExists: false,
+    workCount: 0,
+    pInto: '',
     privacyLines: [
       {
-        h: '现在：全部在本机',
-        t: 'Wi-Fi 名称、密码、店名、收藏与作品记录只写进这台手机的本地存储。小程序不发起任何网络请求，也不上传任何内容。'
+        h: '现在：只在这台手机上处理',
+        t: 'Wi-Fi 名称、密码、店名、收藏与作品记录都只写进本机存储。小程序不发起网络请求，不上传任何内容，也不需要账号。'
       },
       {
-        h: '以后：只上传不敏感信息',
-        t: '如果将来加入云端同步（多人协作、桌位管理），只会在上传「Wi-Fi 名称、店名、桌位号」这类信息之前弹窗明确告知并征得同意；你可以选择不开启。'
+        h: '但导出的图里带着密码',
+        t: 'Wi-Fi 二维码是按通用格式编码的，密码就写在二维码里——这是扫码能直接连网的前提。所以导出的 A4 图、截图、发给好友的图片，都包含 Wi-Fi 名称与密码文字。打印、张贴、转发之前，请确认这张纸会出现在谁面前。'
       },
       {
-        h: '密码永远不上传',
-        t: 'Wi-Fi 密码不会被写进任何网络请求，也不会离开这台手机。云端只保存模板与桌位信息。'
+        h: '密码不会上传，但会被你看得见的地方带走',
+        t: '「不出手机」只针对小程序本身：密码不会被写进任何网络请求。但只要你把图存进相册、发给别人、或打印出来贴在桌上，它就离开了这台手机。'
       },
       {
-        h: '权限',
-        t: '只有你点「保存到相册」时才申请相册写入权限。不使用相机、不读取相册、不获取位置。'
+        h: '以后若加云端同步',
+        t: '只会在上传「Wi-Fi 名称、店名、桌位号」这类信息之前弹窗告知并征得同意，密码不参与同步；你可以选择不开启。'
       },
       {
-        h: '删除',
-        t: '微信「设置 → 小程序 → Wi-Fi 桌牌 → 清除缓存」即可删除本机全部数据，删除后不可恢复。'
+        h: '相册权限',
+        t: '只有点「保存到相册」时才申请写入权限，不读取相册、不使用相机、不获取位置。首次保存前需要同意《用户隐私保护指引》。'
+      },
+      {
+        h: '删除本机数据',
+        t: '下面可以直接清空草稿与作品；也可以在小程序列表里删除小程序，数据随之清除。删除后不可恢复。'
       }
     ],
     version: '0.6.0'
@@ -153,6 +160,68 @@ Page({
   onShow: function () {
     // 从编辑页返回时收藏可能变了
     this.reloadFavorites()
+    this.loadLocalStats()
+  },
+
+  /* ── 本机数据：看得到，也删得掉 ───────────────────────── */
+
+  loadLocalStats: function () {
+    var that = this
+    repo.getDraft().then(function (d) {
+      that.setData({ draftExists: !!(d && (d.ssid || d.shopName)) })
+    }).catch(function () {})
+    repo.listWorks().then(function (list) {
+      that.setData({ workCount: list.length })
+    }).catch(function () {})
+  },
+
+  clearDraftData: function () {
+    var that = this
+    wx.showModal({
+      title: '清空草稿？',
+      content: '会删掉本机保存的店名、Wi-Fi 名称与密码，作品记录不受影响。删除后不可恢复。',
+      confirmText: '清空',
+      confirmColor: '#c8321f',
+      success: function (r) {
+        if (!r.confirm) return
+        repo.clearDraft().then(function () {
+          that.setData({ draftExists: false })
+          wx.showToast({ title: '草稿已清空' })
+        }).catch(function () {
+          wx.showToast({ title: '清空失败', icon: 'none' })
+        })
+      }
+    })
+  },
+
+  clearWorksData: function () {
+    var that = this
+    if (!this.data.workCount) {
+      wx.showToast({ title: '还没有作品记录', icon: 'none' })
+      return
+    }
+    wx.showModal({
+      title: '删除 ' + this.data.workCount + ' 条作品记录？',
+      content: '作品是本机保存的「印过哪些牌」的快照，删除不影响已经导出的图片。删除后不可恢复。',
+      confirmText: '全部删除',
+      confirmColor: '#c8321f',
+      success: function (r) {
+        if (!r.confirm) return
+        repo.clearWorks().then(function () {
+          that.setData({ workCount: 0 })
+          wx.showToast({ title: '作品已删除' })
+        }).catch(function () {
+          wx.showToast({ title: '删除失败', icon: 'none' })
+        })
+      }
+    })
+  },
+
+  openPrivacyContract: function () {
+    var privacy = require('../../utils/privacy')
+    if (!privacy.openContract()) {
+      wx.showToast({ title: '当前版本不支持', icon: 'none' })
+    }
   },
 
   onShareAppMessage: function () {
@@ -383,9 +452,5 @@ Page({
     if (!id) return
     repo.saveSettings({ lastTplId: id }).catch(function () {})
     wx.navigateTo({ url: '/pages/editor/editor?tpl=' + id })
-  },
-
-  goTest: function () {
-    wx.navigateTo({ url: '/pages/test/test' })
   }
 })

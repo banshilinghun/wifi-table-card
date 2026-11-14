@@ -38,6 +38,12 @@ var MM_MIN = {
 }
 
 var MAX_ATTEMPTS = 4
+/**
+ * 网络名 / 密码最多折几行。
+ * 3 行是按最坏情况定的：63 位密码在卡片版式（93mm 宽）上每行约 23 个字符，
+ * 两行会吃掉后面 17 位——而这 17 位往往正是区分两个同名网络的地方。
+ */
+var MAX_ROLL_LINES = 3
 
 /* ── 基础绘制 ───────────────────────────────────────────── */
 
@@ -129,24 +135,131 @@ function drawIconBadge (ctx, x, y, size, bg, fg, kind) {
   ctx.restore()
 }
 
-/** 图标 + 文字的一行，整体在 cx 上居中 */
-function drawRow (ctx, cx, y, iconSize, iconKind, text, size, weight, famName, inkColor, accent) {
+/**
+ * 图标 + 文字的一行，整体在 cx 上居中。
+ * 文字可以是多行（长网络名 / 长密码），图标在整块文字左侧垂直居中。
+ */
+function drawRow (ctx, cx, y, iconSize, iconKind, lines, size, weight, famName, inkColor, accent, mono) {
   var gap = iconSize * 0.46
-  var tw = r.measureText(ctx, text, size, weight, famName)
+  var list = lines && lines.length ? lines : ['']
+  var lineH = size * 1.2
+  var tw = 0
+  for (var i = 0; i < list.length; i++) {
+    tw = Math.max(tw, r.measureText(ctx, list[i], size, weight, famName))
+  }
   var totalW = iconSize + gap + tw
   var x0 = cx - totalW / 2
+  var blockH = list.length * lineH
+  var boxH = Math.max(iconSize, blockH)
+  var cy = y + boxH / 2
 
-  drawIconBadge(ctx, x0, y, iconSize, accent, '#FFFFFF', iconKind)
+  drawIconBadge(ctx, x0, cy - iconSize / 2, iconSize, accent, '#FFFFFF', iconKind)
 
   ctx.save()
   ctx.fillStyle = inkColor
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
   r.setFont(ctx, size, weight, famName)
-  ctx.fillText(text, x0 + iconSize + gap, y + iconSize / 2)
+  for (var j = 0; j < list.length; j++) {
+    ctx.fillText(list[j], x0 + iconSize + gap, cy - blockH / 2 + lineH * (j + 0.5))
+  }
   ctx.restore()
 
-  return { x: x0, y: y, w: totalW, h: iconSize }
+  return { x: x0, y: y, w: totalW, h: boxH }
+}
+
+/* ── 长文本折行 ─────────────────────────────────────────── */
+
+/**
+ * 估算一个字符占几个 em。CJK 与全角标点按 1，西文按 0.55（等宽 0.6）。
+ * 故意估宽一点：plan 与 render 都要用它，估宽了最多多留一行空白，
+ * 估窄了文字会压到插画上。
+ */
+function charEm (code, mono) {
+  if (code < 0x80) return mono ? 0.6 : 0.55
+  if (code < 0x2e80) return 0.6
+  return 1
+}
+
+function estimateWidth (text, size, mono) {
+  var w = 0
+  for (var i = 0; i < text.length; i++) w += charEm(text.charCodeAt(i), mono) * size
+  return w
+}
+
+/**
+ * 折行（估算版，不依赖 ctx）。plan 用它预留高度。
+ * @returns {{lines:string[], rest:number}} rest 是被省略的字符数
+ */
+function wrapEstimate (text, maxW, size, mono, maxLines) {
+  var chars = splitChars(text)
+  var lines = []
+  var cur = ''
+  var used = 0
+  var i = 0
+
+  for (; i < chars.length; i++) {
+    var w = estimateWidth(chars[i], size, mono)
+    if (used + w > maxW && cur) {
+      if (lines.length === maxLines - 1) break
+      lines.push(cur)
+      cur = ''
+      used = 0
+    }
+    cur += chars[i]
+    used += w
+  }
+  if (cur) lines.push(cur)
+
+  return { lines: lines, rest: chars.length - i }
+}
+
+/** 真正折行（按 ctx 实测）。行数不超过 plan 预留的 maxLines，超出部分省略。 */
+function wrapText (ctx, text, maxW, size, weight, famName, maxLines) {
+  var chars = splitChars(text)
+  var lines = []
+  var cur = ''
+  var truncated = false
+
+  for (var i = 0; i < chars.length; i++) {
+    var next = cur + chars[i]
+    if (cur && r.measureText(ctx, next, size, weight, famName) > maxW) {
+      if (lines.length === maxLines - 1) {
+        truncated = true
+        break
+      }
+      lines.push(cur)
+      cur = chars[i]
+    } else {
+      cur = next
+    }
+  }
+  if (cur) lines.push(cur)
+
+  if (truncated && lines.length) {
+    var last = lines.length - 1
+    var cut = lines[last]
+    while (cut.length > 1 && r.measureText(ctx, cut + '…', size, weight, famName) > maxW) {
+      cut = cut.slice(0, cut.length - 1)
+    }
+    lines[last] = cut + '…'
+  }
+
+  return { lines: lines, truncated: truncated }
+}
+
+/**
+ * 一行的最终画法：预留 1 行就缩字号（fitText），预留多行就折行。
+ * 折行仍然放不下时最后一行加省略号，并由调用方补一条 warning——
+ * 不做无声截断。
+ */
+function rowText (ctx, text, maxW, size, weight, famName, maxLines) {
+  if (maxLines <= 1) {
+    var fit = r.fitText(ctx, text, maxW, size, weight, famName, 0.72)
+    return { lines: [fit.text], size: fit.size, truncated: fit.truncated }
+  }
+  var wrapped = wrapText(ctx, text, maxW, size, weight, famName, maxLines)
+  return { lines: wrapped.lines, size: size, truncated: wrapped.truncated }
 }
 
 function drawVertical (ctx, text, x, y, size, step, color) {
@@ -179,10 +292,19 @@ function plan (ctx, tpl, data, W, H, bounds) {
   var titleText = copy.title || '免费 Wi-Fi'
   var subText = copy.sub || '扫码连接 · 无需询问'
 
-  var ssidText = d.ssid || '未填写网络名'
-  var pwdText = d.password || '无需密码'
+  // 文字必须说真话：没填网络名 ≠ 网络名就叫「未填写网络名」，
+  // 加密网络没填密码更不是「无需密码」。
+  var ssidText = d.ssid ? String(d.ssid) : (d.ssidPlaceholder || '未填写网络名')
+  var pwdText
+  if (d.type === 'nopass') {
+    pwdText = '无需密码'
+  } else if (!d.password) {
+    pwdText = '未填写密码'
+  } else {
+    pwdText = String(d.password)
+  }
   var shopText = d.shopName || ''
-  var showPwdRow = d.showPassword !== false && d.type !== 'nopass'
+  var showPwdRow = d.showPassword !== false
   var hasMini = !!(d.miniCodeUrl && d.miniCode)
 
   var baseScale = tpl.typeScale || 1
@@ -195,6 +317,7 @@ function plan (ctx, tpl, data, W, H, bounds) {
     var rowSize = BASE.row * M * scale
     var shopSize = BASE.shop * M * scale
     var iconSize = rowSize * 1.16
+    var lineH = rowSize * 1.2
 
     var gapA = 0.016 * M
     var gapB = 0.030 * M
@@ -203,9 +326,19 @@ function plan (ctx, tpl, data, W, H, bounds) {
     var gapE = 0.026 * M
     var lh = 1.18
 
-    var rowCount = showPwdRow ? 2 : (ssidText ? 1 : 0)
+    // 一行放不下就折成两行——长网络名 / 长密码在 A6 上也能整段读到，
+    // 而不是被省略号吃掉一半（省掉的几个字往往正是区分同名网络的地方）
+    var maxRowW = safe.w - iconSize - iconSize * 0.46
+    var ssidWrap = wrapEstimate(ssidText, maxRowW, rowSize, false, MAX_ROLL_LINES)
+    var pwdWrap = showPwdRow
+      ? wrapEstimate(pwdText, maxRowW, rowSize, true, MAX_ROLL_LINES)
+      : { lines: [], rest: 0 }
+
+    var rowH1 = Math.max(iconSize, ssidWrap.lines.length * lineH)
+    var rowH2 = showPwdRow ? Math.max(iconSize, pwdWrap.lines.length * lineH) : 0
+
     var fixedH = titleSize * lh + gapA + subSize * lh + gapB + gapC +
-      iconSize + (rowCount === 2 ? gapD + iconSize : 0) +
+      rowH1 + (showPwdRow ? gapD + rowH2 : 0) +
       (shopText ? gapE + shopSize * lh : 0)
 
     // 0.86 而不是 1.0：二维码框本身还有 framePad，留出内边距才不至于擦到插画
@@ -220,8 +353,11 @@ function plan (ctx, tpl, data, W, H, bounds) {
       used = {
         titleSize: titleSize, subSize: subSize, rowSize: rowSize, shopSize: shopSize,
         iconSize: iconSize, gapA: gapA, gapB: gapB, gapC: gapC, gapD: gapD, gapE: gapE,
-        lh: lh, qrSize: qrSize, framePad: framePad, rowCount: rowCount,
-        showPwdRow: showPwdRow, fixedH: fixedH
+        lh: lh, qrSize: qrSize, framePad: framePad,
+        ssidLines: ssidWrap.lines, pwdLines: pwdWrap.lines,
+        ssidRest: ssidWrap.rest, pwdRest: pwdWrap.rest,
+        rowH1: rowH1, rowH2: rowH2, lineH: lineH,
+        showPwdRow: showPwdRow, fixedH: fixedH, maxRowW: maxRowW
       }
       break
     }
@@ -231,7 +367,6 @@ function plan (ctx, tpl, data, W, H, bounds) {
 
   var totalH = used.fixedH + used.qrSize
   var topPad = 0.018 * M
-  var innerH0 = safe.h - 0.030 * M
   var startY = safe.y + Math.max(topPad, (safe.h - totalH) / 2)
 
   var titleY = startY
@@ -239,8 +374,8 @@ function plan (ctx, tpl, data, W, H, bounds) {
   var qrY = subY + used.subSize * used.lh + used.gapB
   var qrX = safe.x + (safe.w - used.qrSize) / 2
   var row1Y = qrY + used.qrSize + used.gapC
-  var row2Y = row1Y + used.iconSize + used.gapD
-  var shopY = (used.rowCount === 2 ? row2Y + used.iconSize : row1Y + used.iconSize) + used.gapE
+  var row2Y = row1Y + used.rowH1 + used.gapD
+  var shopY = (used.showPwdRow ? row2Y + used.rowH2 : row1Y + used.rowH1) + used.gapE
 
   // 小程序码：有值时码位右移，二维码与码并排居中
   if (hasMini) {
@@ -297,6 +432,7 @@ function renderPaper (ctx, tpl, data, width, height, opts) {
   var ink = tpl.ink || '#222222'
   var accent = tpl.accent || ink
   var fontName = fam(tpl)
+  var warnings = []
 
   ctx.save()
   ctx.clearRect(0, 0, W, H)
@@ -369,17 +505,20 @@ function renderPaper (ctx, tpl, data, width, height, opts) {
   }
 
   // 7) 网络行
-  var maxRowW = P.safe.w - P.iconSize - P.iconSize * 0.46
-  var ssidFit = r.fitText(ctx, P.ssidText, maxRowW, P.rowSize, '500', fontName, 0.62)
-  var row1 = drawRow(ctx, cx, P.row1Y, P.iconSize, 'wifi', ssidFit.text,
-    ssidFit.size, '500', fontName, ink, accent)
+  var maxRowW = P.maxRowW
+  var ssid = rowText(ctx, P.ssidText, maxRowW, P.rowSize, '500', fontName, P.ssidLines.length)
+  var row1 = drawRow(ctx, cx, P.row1Y, P.iconSize, 'wifi', ssid.lines,
+    ssid.size, '500', fontName, ink, accent, false)
+  if (ssid.truncated) warnings.push('网络名过长，卡片上已省略（二维码里是完整的）')
 
   // 8) 密码行
   var row2 = null
+  var pwd = null
   if (P.showPwdRow) {
-    var pwdFit = r.fitText(ctx, P.pwdText, maxRowW, P.rowSize, '400', r.MONO, 0.62)
-    row2 = drawRow(ctx, cx, P.row2Y, P.iconSize, 'lock', pwdFit.text,
-      pwdFit.size, '400', r.MONO, ink, accent)
+    pwd = rowText(ctx, P.pwdText, maxRowW, P.rowSize, '400', r.MONO, P.pwdLines.length)
+    row2 = drawRow(ctx, cx, P.row2Y, P.iconSize, 'lock', pwd.lines,
+      pwd.size, '400', r.MONO, ink, accent, true)
+    if (pwd.truncated) warnings.push('密码过长，卡片上已省略（二维码里是完整的）')
   }
 
   // 9) 店名
@@ -416,7 +555,6 @@ function renderPaper (ctx, tpl, data, width, height, opts) {
   var toMm = shortMm ? shortMm / M : 0
 
   var modulePx = qrMeta.cell
-  var warnings = []
 
   function check (label, px, minMm) {
     if (!shortMm) return
@@ -426,8 +564,8 @@ function renderPaper (ctx, tpl, data, width, height, opts) {
 
   check('标题', titleFit.size, MM_MIN.title)
   check('副标题', subFit.size, MM_MIN.sub)
-  check('网络行', ssidFit.size, MM_MIN.row)
-  if (row2) check('密码行', P.rowSize, MM_MIN.row)
+  check('网络行', ssid.size, MM_MIN.row)
+  if (pwd) check('密码行', pwd.size, MM_MIN.row)
   if (shopMeta) check('店名', shopMeta.size, MM_MIN.shop)
   check('二维码', qs, MM_MIN.qr)
   check('单模块', modulePx, MM_MIN.module)
@@ -460,8 +598,14 @@ function renderPaper (ctx, tpl, data, width, height, opts) {
       sizeMm: qs * toMm,
       frame: { x: qx - fp, y: qy - fp, w: qs + fp * 2, h: qs + fp * 2 }
     },
-    ssid: { text: ssidFit.text, size: ssidFit.size, color: ink, box: row1 },
-    pwd: row2 ? { text: P.pwdText, size: P.rowSize, color: ink, box: row2 } : null,
+    ssid: {
+      text: ssid.lines.join('\n'), lines: ssid.lines.slice(),
+      size: ssid.size, color: ink, box: row1, truncated: ssid.truncated
+    },
+    pwd: row2 ? {
+      text: pwd.lines.join('\n'), lines: pwd.lines.slice(),
+      size: pwd.size, color: ink, box: row2, truncated: pwd.truncated
+    } : null,
     shop: shopMeta ? Object.assign({}, shopMeta, {
       color: ink,
       box: { x: cx - shopFit.width / 2, y: P.shopY, w: shopFit.width, h: shopFit.size * 1.18 }

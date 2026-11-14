@@ -6,20 +6,24 @@
   <view class="stage-meta">
     <text class="stage-name">{{tplName}}</text>
     <text class="stage-sep">·</text>
-    <text class="stage-info">{{planInfo}}</text>
+    <text class="stage-info">{{shapeText}} · {{planInfo}}</text>
   </view>
+
+  <view class="stage-sub">{{moduleInfo}}</view>
 
   <view class="tags">
     <view class="tag {{qrLabel === '小型二维码' ? 'tag-warn' : 'tag-ok'}}">{{qrLabel}}</view>
     <view class="tag">A4 · {{orientation === 'portrait' ? '竖向' : '横向'}}</view>
+    <view class="tag" wx:if="{{vertical}}">竖排小字</view>
   </view>
 
   <view class="warn" wx:if="{{warn}}">{{warn}}</view>
+  <view class="note" wx:if="{{note}}">{{note}}</view>
 
   <view class="group">
     <view class="group-head">
       <text class="group-title">版式</text>
-      <text class="group-note">份数多时二维码会自动变小</text>
+      <text class="group-note">按二维码实际尺寸判断，不达标会禁用</text>
     </view>
     <view class="opts">
       <view
@@ -31,6 +35,7 @@
       >
         <text class="opt-name">{{item.label}}</text>
         <text class="opt-note">{{item.count}} 份 · {{item.grid}}</text>
+        <text class="opt-qr">{{item.usable ? item.qrMm + 'mm' : '不达标'}}</text>
       </view>
     </view>
   </view>

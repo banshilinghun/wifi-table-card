@@ -11,6 +11,7 @@ var repo = require('../../utils/repo')
 var artwork = require('../../utils/art')
 var draw = require('../../utils/draw')
 var wifi = require('../../utils/wifi')
+var qrMetrics = require('../../utils/qr-metrics')
 var boundsAll = require('../../packageTpl/art/bounds')
 
 var TYPES = [
@@ -48,9 +49,18 @@ function timeLabel () {
   return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds())
 }
 
-/** 白纸模板的二维码边长估算（真实值渲染后回填） */
-function estimateQrMm (print) {
-  return Math.round(0.5343 * 0.86 * Math.min(print.w, print.h))
+/**
+ * 二维码边长（mm）。不写死比例：白纸跑排版、深色读 slots，
+ * 再用载荷真实模块数算单模块大小——同一个模板换个长密码就会变。
+ */
+function qrInfo (tpl, data, bounds, print) {
+  var m = qrMetrics.measure({
+    tpl: tpl, data: data, bounds: bounds, cardW: print.w, cardH: print.h
+  })
+  return {
+    qrMm: Math.round(m.qrMm),
+    note: m.moduleCount + ' 模块 · 单模块 ' + m.moduleMm.toFixed(2) + 'mm'
+  }
 }
 
 Page({
@@ -67,6 +77,8 @@ Page({
     printLabel: '',
     printSpec: '',
     qrMm: 0,
+    qrNote: '',
+    textNote: '',
     shopName: '',
     ssid: '',
     password: '',
@@ -186,9 +198,14 @@ Page({
     var ratio = catalog.printRatio(tpl, key)
     var box = catalog.fitBox(ratio, PREVIEW_MAX_W, PREVIEW_MAX_H)
 
-    var qrMm = tpl.series === 'paper'
-      ? estimateQrMm(print)
-      : Math.round(tpl.slots.qr.size * Math.min(print.w, print.h))
+    var info = qrInfo(tpl, {
+      ssid: this.form.ssid,
+      password: this.form.password,
+      type: this.form.type,
+      showPassword: this.showPassword,
+      payload: this.payload,
+      miniCodeUrl: ''
+    }, this.bounds, print)
 
     var opts = tpl.prints.map(function (k) {
       return { key: k, label: catalog.getPrint(k).short, on: k === key }
@@ -202,7 +219,8 @@ Page({
       printKey: key,
       printLabel: print.label,
       printSpec: print.spec,
-      qrMm: qrMm,
+      qrMm: info.qrMm,
+      qrNote: info.note,
       previewW: box.width,
       previewH: box.height
     })
@@ -347,8 +365,22 @@ Page({
             vertical: that.showVertical
           })
 
-          var qrMm = meta.qr && meta.qr.sizeMm ? Math.round(meta.qr.sizeMm) : that.data.qrMm
-          if (qrMm && qrMm !== that.data.qrMm) that.setData({ qrMm: qrMm })
+          // 二维码的真实毫米数：画布宽 = print.w 毫米，按比例倒推，
+          // 两套渲染器都适用（深色只出像素，白纸自己换算过）
+          var mmPerPx = print.w / w
+          var qrPx = meta.qr ? meta.qr.size : 0
+          var qrMm = qrPx ? Math.round(qrPx * mmPerPx) : that.data.qrMm
+          var mods = meta.qr ? (meta.qr.moduleCount || 0) : 0
+          var moduleMm = mods ? (qrPx * mmPerPx) / (mods + (meta.qr.quiet || 4) * 2) : 0
+
+          var textBits = []
+          if (meta.ssid && meta.ssid.truncated) textBits.push('网络名在卡片上已省略')
+          if (meta.pwd && meta.pwd.truncated) textBits.push('密码在卡片上已省略')
+
+          var patch = { textNote: textBits.join('；') }
+          if (qrMm && qrMm !== that.data.qrMm) patch.qrMm = qrMm
+          if (mods) patch.qrNote = mods + ' 模块 · 单模块 ' + moduleMm.toFixed(2) + 'mm'
+          that.setData(patch)
 
           var extra = ''
           if (tpl.series === 'paper') {

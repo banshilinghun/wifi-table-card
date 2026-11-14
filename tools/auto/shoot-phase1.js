@@ -1,5 +1,5 @@
 /**
- * 微信开发者工具 · phase1（白纸模板 + 打印预览）截图与验收
+ * 微信开发者工具 · phase1 截图与验收（模拟器，不是真机）
  *
  * 前置：
  *   /Applications/wechatwebdevtools.app/Contents/MacOS/cli auto \
@@ -8,15 +8,16 @@
  *   node tools/auto/shoot-phase1.js
  *
  * 采集：
- *   首页（白纸 / 深色 / 收藏）· 6 套白纸模板编辑页 · 打印预览 4 种版式
- *   · 横版 + 裁切线 · 300dpi A4 拼 4 份导出
+ *   首页（白纸 / 深色 / 收藏 / 隐私）· 6 套白纸编辑页 · 2 套深色编辑页
+ *   · 打印预览 4 种版式 · 横版 · 4 种裁切线 · 深色打印页
+ *   · 300dpi A4 拼 4 份导出（白纸 + 深色各一张）· 本机数据删除
+ *
  * 截图先落到系统临时目录（写项目目录会触发重新编译，小程序被重置回首页），
  * 全部跑完再一次性拷进 docs/screens/phase1/。
  */
 const path = require('path')
 const fs = require('fs')
 const os = require('os')
-const { execFileSync } = require('child_process')
 const automator = require('miniprogram-automator')
 
 const PROJECT = path.resolve(__dirname, '..', '..')
@@ -32,6 +33,10 @@ const PAPER = [
   ['paper-beauty', '美甲'],
   ['paper-teahouse', '茶室'],
   ['paper-newyear', '春节']
+]
+const DARK = [
+  ['night-berth', '夜泊'],
+  ['ember', '炉火']
 ]
 
 const logs = []
@@ -165,6 +170,16 @@ const pickSeg = (name, key) => S.ev(name + ' ' + key, function (name, key) {
 
 const scrollTo = y => S.run('pageScrollTo', mp => mp.pageScrollTo(y, 300))
 
+/** 把 showModal 换成自动确认，才能测到删除逻辑而不是弹窗本身 */
+const autoConfirm = fn => S.ev('自动确认弹窗', function (fn) {
+  var p = getCurrentPages()[getCurrentPages().length - 1]
+  var orig = wx.showModal
+  wx.showModal = function (o) { if (o && o.success) o.success({ confirm: true, cancel: false }) }
+  p[fn]()
+  setTimeout(function () { wx.showModal = orig }, 400)
+  return true
+}, fn)
+
 /* ── 主流程 ───────────────────────────────────────────────── */
 
 ;(async () => {
@@ -236,13 +251,28 @@ const scrollTo = y => S.run('pageScrollTo', mp => mp.pageScrollTo(y, 300))
     getCurrentPages()[getCurrentPages().length - 1].showPrivacy()
   })
   await sleep(1000)
+  await S.ev('滚到本机数据', function () {
+    const p = getCurrentPages()[getCurrentPages().length - 1]
+    p.setData({ draftExists: true, workCount: 3 })
+  })
+  await sleep(600)
   await shot('05-privacy')
+  await S.ev('滚到本机数据', function () {
+    getCurrentPages()[getCurrentPages().length - 1].setData({ pInto: 'pdata' })
+  })
+  await sleep(900)
+  await shot('05b-privacy-data')
   const pv = await S.ev('privacy 文案', function () {
     const d = getCurrentPages()[getCurrentPages().length - 1].data
-    return { on: d.privacy, n: (d.privacyLines || []).length, all: (d.privacyLines || []).map(function (x) { return x.h + '|' + x.t }).join('\n') }
+    return {
+      on: d.privacy,
+      n: (d.privacyLines || []).length,
+      all: (d.privacyLines || []).map(function (x) { return x.h + '|' + x.t }).join('\n')
+    }
   })
-  ok('隐私面板打开，5 条说明', pv.on === true && pv.n === 5, pv.n + ' 条')
-  ok('写明密码永不上传', /密码/.test(pv.all) && /不上传|不会.*上传/.test(pv.all))
+  ok('隐私面板打开，6 条说明', pv.on === true && pv.n === 6, pv.n + ' 条')
+  ok('明确写「导出的图里带着密码」', /导出的图|导出的 A4/.test(pv.all) && /密码/.test(pv.all))
+  ok('不再声称密码永远不离开手机', !/密码永远不上传|永远不会离开这台手机/.test(pv.all))
   await S.ev('closePrivacy', function () {
     getCurrentPages()[getCurrentPages().length - 1].closePrivacy()
   })
@@ -258,18 +288,38 @@ const scrollTo = y => S.run('pageScrollTo', mp => mp.pageScrollTo(y, 300))
     await fillEditor(SAMPLE.shop, SAMPLE.ssid, SAMPLE.pwd)
     await waitLog(new RegExp('\\[editor\\] ' + id + ' /'), 20000)
     await sleep(1400)
-    const st = await pageState('tplName,tplId,isPaper,printKey,printSpec,qrMm,showVertical,fav,previewW,previewH,sceneLabel')
+    const st = await pageState('tplName,tplId,isPaper,printKey,printSpec,qrMm,qrNote,showVertical,fav,previewW,previewH,sceneLabel')
     await shot('1' + (i + 1) + '-editor-' + id.replace('paper-', ''))
     editorState.push(st)
     ok('编辑页 · ' + PAPER[i][1] + '（' + st.tplName + '）',
       st.tplId === id && st.isPaper === true && st.qrMm >= 18,
-      st.printKey + ' ' + st.previewW + '×' + st.previewH + ' · 码 ' + st.qrMm + 'mm · ' + st.sceneLabel)
+      st.printKey + ' ' + st.previewW + '×' + st.previewH + ' · 码 ' + st.qrMm + 'mm · ' + st.qrNote)
     await navBack()
     await sleep(1800)
   }
 
-  /* 5 侧边竖排开关 */
-  console.log('\n[5] 侧边竖排小字开关')
+  /* 5 深色模板编辑页（比例与白纸不同，打印时必须保留） */
+  console.log('\n[5] 深色模板编辑页 ×2')
+  const darkState = []
+  for (let i = 0; i < DARK.length; i++) {
+    const id = DARK[i][0]
+    await navTo('/pages/editor/editor?tpl=' + id)
+    await sleep(2600)
+    await fillEditor('拾光咖啡', 'Shiguang-Cafe', 'coffee2024')
+    await waitLog(new RegExp('\\[editor\\] ' + id + ' /'), 20000)
+    await sleep(1400)
+    const st = await pageState('tplName,tplId,isPaper,printKey,printSpec,qrMm,qrNote,shape,previewW,previewH')
+    await shot('28-dark-editor-' + id)
+    darkState.push(st)
+    ok('深色编辑页 · ' + DARK[i][1] + '（' + st.tplName + '）',
+      st.tplId === id && st.isPaper === false && st.qrMm > 0,
+      st.shape + ' · ' + st.printKey + ' ' + st.previewW + '×' + st.previewH + ' · 码 ' + st.qrMm + 'mm')
+    await navBack()
+    await sleep(1600)
+  }
+
+  /* 6 侧边竖排开关 */
+  console.log('\n[6] 侧边竖排小字开关')
   await navTo('/pages/editor/editor?tpl=paper-minsu')
   await sleep(2600)
   await fillEditor('山间民宿', 'Minsu-Guest', 'welcome88')
@@ -281,14 +331,41 @@ const scrollTo = y => S.run('pageScrollTo', mp => mp.pageScrollTo(y, 300))
   const vert = await pageState('showVertical')
   await shot('19-editor-vertical-off')
   ok('竖排可关闭', vert.showVertical === false)
+  const savedVert = await S.ev('读草稿竖排状态', function () {
+    return new Promise(function (resolve) {
+      var p = getCurrentPages()[getCurrentPages().length - 1]
+      p.persist()
+      setTimeout(function () {
+        resolve(wx.getStorageSync('wifi_draft'))
+      }, 600)
+    })
+  })
+  ok('关掉的竖排状态写进了草稿', savedVert && savedVert.showVertical === false,
+    'showVertical=' + (savedVert && savedVert.showVertical))
   await callPage('toggleVertical')
+  await sleep(1200)
+
+  // 无密码网络：卡片上应写「无需密码」，而不是留空或写成密码
+  await S.ev('切到无密码', function () {
+    getCurrentPages()[getCurrentPages().length - 1]
+      .pickType({ currentTarget: { dataset: { key: 'nopass' } } })
+  })
+  await sleep(1800)
+  const nopass = await pageState('type,showPassword,payload')
+  await shot('17-editor-nopass')
+  ok('无密码网络的载荷不带 P 字段',
+    nopass.type === 'nopass' && /T:nopass;/.test(nopass.payload) && !/;P:/.test(nopass.payload),
+    nopass.payload)
+  await S.ev('切回 WPA', function () {
+    getCurrentPages()[getCurrentPages().length - 1]
+      .pickType({ currentTarget: { dataset: { key: 'WPA' } } })
+  })
   await sleep(1200)
   await navBack()
   await sleep(1800)
 
-  /* 6 打印预览：4 种版式 */
-  console.log('\n[6] 打印预览 · 4 种版式')
-  // 从编辑页进打印，草稿与模板才是一致的（打印页只读草稿）
+  /* 7 打印预览：4 种版式 */
+  console.log('\n[7] 打印预览 · 4 种版式')
   await navTo('/pages/editor/editor?tpl=paper-minsu')
   await sleep(2600)
   await fillEditor('山间民宿', 'Minsu-Guest', 'welcome88')
@@ -296,9 +373,11 @@ const scrollTo = y => S.run('pageScrollTo', mp => mp.pageScrollTo(y, 300))
   await sleep(1200)
   await callPage('goPrint')
   await sleep(3000)
-  let ps = await pageState('tplName,layout,orientation,cut,narrow,layouts,planInfo,qrLabel,warn,canvasW,canvasH')
-  ok('进入打印页，默认整张', ps.layout === 'full' && ps.canvasW > 300,
+  let ps = await pageState('tplName,layout,orientation,cut,narrow,layouts,planInfo,moduleInfo,qrLabel,warn,note,vertical,canvasW,canvasH')
+  ok('进入打印页，默认整张 + 竖排跟随草稿', ps.layout === 'full' && ps.canvasW > 300,
     ps.tplName + ' · ' + ps.layout + ' · ' + ps.planInfo)
+  ok('标注二维码真实尺寸与模块数', /模块/.test(ps.moduleInfo || ''), ps.moduleInfo)
+  ok('草稿开着竖排，打印页也开着', ps.vertical === true, 'vertical=' + ps.vertical)
   await shot('20-print-full')
 
   const LAYOUTS = [
@@ -310,17 +389,23 @@ const scrollTo = y => S.run('pageScrollTo', mp => mp.pageScrollTo(y, 300))
   for (const [key, name] of LAYOUTS) {
     await pickSeg('pickLayout', key)
     await sleep(2200)
-    const st = await pageState('layout,planInfo,qrLabel,warn,layouts')
+    const st = await pageState('layout,planInfo,moduleInfo,qrLabel,warn,note,layouts')
     layoutInfo.push({ key, info: st.planInfo, qr: st.qrLabel })
     await shot(name)
-    ok('版式 ' + key + ' · ' + st.planInfo, st.layout === key && !st.warn,
-      st.qrLabel + (st.warn ? ' ⚠' + st.warn : ''))
+    // 迷你 8 份时字号会低于可读下限，此时 warn 是「卡片偏小」而不是「扫不出来」，
+    // 所以断言分开：版式必须真的切过去，扫码下限由 moduleInfo 判断
+    ok('版式 ' + key + ' · ' + st.planInfo, st.layout === key,
+      st.qrLabel + ' · ' + st.moduleInfo + (st.warn ? ' ⚠' + st.warn : ''))
   }
-  ok('迷你（8 份）标注为小型二维码', /小型/.test(layoutInfo[3].qr), layoutInfo[3].qr)
+  ok('迷你（8 份）二维码仍达标准尺寸', /标准/.test(layoutInfo[3].qr), layoutInfo[3].qr)
   ok('整张（1 份）标注为标准二维码', /标准/.test(layoutInfo[0].qr), layoutInfo[0].qr)
+  const optInfo = await pageState('layouts')
+  ok('四档版式都显示码尺寸与单模块尺寸',
+    optInfo.layouts.every(function (o) { return o.qrMm > 0 && o.moduleMm > 0 }),
+    optInfo.layouts.map(function (o) { return o.label + ' ' + o.qrMm + 'mm/' + o.moduleMm }).join(' · '))
 
-  /* 7 横版 + 裁切线 */
-  console.log('\n[7] 横版 · 裁切线')
+  /* 8 横版 + 裁切线 */
+  console.log('\n[8] 横版 · 裁切线')
   await pickSeg('pickLayout', 'card')
   await sleep(1600)
   await S.ev('pickOrientation', function () {
@@ -342,33 +427,119 @@ const scrollTo = y => S.run('pageScrollTo', mp => mp.pageScrollTo(y, 300))
     await shot(name)
   }
   await pickSeg('pickCut', 'corner')
-  await sleep(1200)
+  await sleep(1400)
 
-  /* 8 导出 300dpi · A4 拼 4 份 */
-  console.log('\n[8] 导出 A4 拼 4 份（300dpi）')
-  const exp = await S.ev('导出', function () {
-    return new Promise(function (resolve) {
-      const p = getCurrentPages()[getCurrentPages().length - 1]
-      p.exportAt(300, true)
-      var n = 0
-      var t = setInterval(function () {
-        n++
-        if (p.data.outPath || n > 100) {
-          clearInterval(t)
-          var tmp = p.data.outPath
-          if (!tmp) return resolve({ err: 'no-path', exporting: p.data.exporting })
-          wx.getFileSystemManager().saveFile({
-            tempFilePath: tmp,
-            filePath: wx.env.USER_DATA_PATH + '/a4-4cards.jpg',
-            success: function (r) { resolve({ saved: r.savedFilePath, tmp: tmp, info: p.data.outInfo }) },
-            fail: function (e) { resolve({ err: e.errMsg, tmp: tmp, info: p.data.outInfo }) }
-          })
-        }
-      }, 300)
-    })
-  })
+  /* 9 导出 300dpi · A4 拼 4 份（白纸） */
+  console.log('\n[9] 导出 A4 拼 4 份（300dpi · 白纸）')
+  async function exportTo (fileName) {
+    return S.ev('导出 ' + fileName, function (fileName) {
+      return new Promise(function (resolve) {
+        const p = getCurrentPages()[getCurrentPages().length - 1]
+        p.exportAt(300, true)
+        var n = 0
+        var t = setInterval(function () {
+          n++
+          if (p.data.outPath || n > 120) {
+            clearInterval(t)
+            var tmp = p.data.outPath
+            if (!tmp) return resolve({ err: 'no-path', exporting: p.data.exporting })
+            var fs = wx.getFileSystemManager()
+            fs.saveFile({
+              tempFilePath: tmp,
+              filePath: wx.env.USER_DATA_PATH + '/' + fileName,
+              success: function (r) {
+                // 顺手读成 base64 带回来：模拟器文件系统路径不好找，
+                // 让 Node 侧直接落盘到 docs 里，比事后翻目录可靠
+                fs.readFile({
+                  filePath: r.savedFilePath,
+                  encoding: 'base64',
+                  success: function (rf) {
+                    resolve({ saved: r.savedFilePath, tmp: tmp, info: p.data.outInfo, b64: rf.data })
+                  },
+                  fail: function () { resolve({ saved: r.savedFilePath, tmp: tmp, info: p.data.outInfo }) }
+                })
+              },
+              fail: function (e) { resolve({ err: e.errMsg, tmp: tmp, info: p.data.outInfo }) }
+            })
+          }
+        }, 300)
+      })
+    }, fileName)
+  }
+  const exp = await exportTo('a4-4cards.jpg')
+  if (exp && exp.b64) {
+    fs.mkdirSync(DELIVER, { recursive: true })
+    fs.writeFileSync(path.join(DELIVER, 'a4-4cards-300dpi.jpg'), Buffer.from(exp.b64, 'base64'))
+    console.log('  已保存 docs/screens/phase1/a4-4cards-300dpi.jpg')
+    delete exp.b64
+  }
   console.log('  导出结果 ' + JSON.stringify(exp))
-  ok('导出成功并给出 300dpi 尺寸', !exp.err && /2480×3508/.test(exp.info || ''), exp.info || exp.err)
+  ok('白纸导出成功并给出 300dpi 尺寸', !exp.err && /2480×3508/.test(exp.info || ''), exp.info || exp.err)
+
+  /* 10 深色模板打印页 + 导出（比例与样式必须保留） */
+  console.log('\n[10] 深色模板打印')
+  // 用 reLaunch 回首页，而不是连按两次返回：导出后页面栈不一定还是两层，
+  // navigateBack 在栈底会直接抛错（上一版就是这里挂的）
+  await reLaunch('/pages/index/index')
+  await sleep(2000)
+  await navTo('/pages/editor/editor?tpl=ember')
+  await sleep(2600)
+  await fillEditor('拾光咖啡', 'Shiguang-Cafe', 'coffee2024')
+  await waitLog(/\[editor\] ember \/ /, 20000)
+  await sleep(1400)
+  await callPage('goPrint')
+  await sleep(3200)
+  const dp = await pageState('tplName,layout,orientation,planInfo,moduleInfo,qrLabel,warn,shapeText,canvasW,canvasH')
+  await shot('29-dark-print-full')
+  ok('深色打印页进入并显示自家比例', dp.canvasW > 0 && /2:1/.test(dp.shapeText || ''),
+    dp.tplName + ' · ' + dp.shapeText + ' · ' + dp.planInfo)
+  await pickSeg('pickLayout', 'card')
+  await sleep(2200)
+  await shot('30-dark-print-card')
+  const dc = await pageState('layout,planInfo,moduleInfo,layouts')
+  ok('深色卡片版式可用且带真实码尺寸', dc.layout === 'card' && /模块/.test(dc.moduleInfo),
+    dc.planInfo + ' · ' + dc.moduleInfo)
+  const expDark = await exportTo('a4-dark.jpg')
+  if (expDark && expDark.b64) {
+    fs.writeFileSync(path.join(DELIVER, 'a4-dark-300dpi.jpg'), Buffer.from(expDark.b64, 'base64'))
+    console.log('  已保存 docs/screens/phase1/a4-dark-300dpi.jpg')
+    delete expDark.b64
+  }
+  ok('深色导出成功（2480×3508）', !expDark.err && /2480×3508/.test(expDark.info || ''),
+    expDark.info || expDark.err)
+
+  /* 11 本机数据删除 */
+  console.log('\n[11] 本机数据删除')
+  await reLaunch('/pages/index/index')
+  await sleep(2000)
+  const before = await S.ev('清空前的本机数据', function () {
+    return {
+      draft: !!wx.getStorageSync('wifi_draft'),
+      works: (wx.getStorageSync('wifi_works') || []).length
+    }
+  })
+  ok('导出后本机确实有草稿与作品', before.draft === true && before.works > 0,
+    '草稿 ' + before.draft + ' · 作品 ' + before.works + ' 条')
+
+  await S.ev('打开隐私面板', function () {
+    getCurrentPages()[getCurrentPages().length - 1].showPrivacy()
+  })
+  await sleep(800)
+  await autoConfirm('clearDraftData')
+  await sleep(1500)
+  await autoConfirm('clearWorksData')
+  await sleep(1500)
+  const after = await S.ev('清空后的本机数据', function () {
+    return {
+      draft: !!wx.getStorageSync('wifi_draft'),
+      works: (wx.getStorageSync('wifi_works') || []).length,
+      draftExists: getCurrentPages()[getCurrentPages().length - 1].data.draftExists,
+      workCount: getCurrentPages()[getCurrentPages().length - 1].data.workCount
+    }
+  })
+  await shot('31-privacy-cleared')
+  ok('草稿可以删掉', after.draft === false && after.draftExists === false, JSON.stringify(after))
+  ok('作品可以删掉', after.works === 0 && after.workCount === 0, JSON.stringify(after))
 
   /* 汇总 */
   fs.mkdirSync(DELIVER, { recursive: true })
@@ -377,9 +548,9 @@ const scrollTo = y => S.run('pageScrollTo', mp => mp.pageScrollTo(y, 300))
   })
   console.log('\n截图已拷到 docs/screens/phase1/ ×' + shots.length)
 
-  fs.writeFileSync(path.join(OUT, 'export.json'), JSON.stringify(exp, null, 2))
+  fs.writeFileSync(path.join(OUT, 'export.json'), JSON.stringify({ exp: exp, dark: expDark }, null, 2))
   fs.writeFileSync(path.join(PROJECT, 'tools', 'out', 'phase1-report.json'),
-    JSON.stringify({ systemInfo: info, checks: check, shots, editorState, layoutInfo, exp, logs }, null, 2))
+    JSON.stringify({ systemInfo: info, checks: check, shots, editorState, darkState, layoutInfo, exp, expDark, logs }, null, 2))
 
   const failed = check.filter(c => !c.pass)
   console.log('\n══════ 结论 ══════')

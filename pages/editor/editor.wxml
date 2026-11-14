@@ -17,6 +17,7 @@
     <text class="stage-print">{{printLabel}}</text>
   </view>
   <view class="stage-sub">{{sceneLabel}} · {{region}} · {{shape}} · 二维码 {{qrMm}}mm</view>
+  <view class="stage-sub stage-sub-2" wx:if="{{qrNote}}">{{qrNote}}</view>
 
   <view class="form">
     <view class="field">
@@ -92,7 +93,7 @@
           <view class="sw-knob"></view>
         </view>
       </view>
-      <text class="field-note">{{showVertical ? '右侧竖排一行「模板名」，窄牌上建议关掉' : '已关闭，右侧留白'}}</text>
+      <text class="field-note">{{showVertical ? '右侧竖排一行「Wi-Fi 桌牌」，打印时同样显示；窄牌上建议关掉' : '已关闭，右侧留白（打印时也不显示）'}}</text>
     </view>
 
     <view class="field field-last">
@@ -119,6 +120,10 @@
   </view>
 
   <view wx:if="{{!ssidFilled}}" class="hint-line">填写 Wi-Fi 名称后，上方二维码会自动更新</view>
+
+  <view wx:if="{{textNote}}" class="warn">
+    <text class="warn-item">· {{textNote}}（二维码里是完整值，扫码不受影响）</text>
+  </view>
 
   <view wx:if="{{warnings.length}}" class="warn">
     <text wx:for="{{warnings}}" wx:key="*this" class="warn-item">· {{item}}</text>

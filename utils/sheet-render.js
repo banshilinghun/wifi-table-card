@@ -2,11 +2,12 @@
  * utils/sheet-render.js
  * 把一张 A4 拼版画出来：预览与 300dpi 导出共用这一个函数，只改每毫米像素数。
  *
- * 每份都是一次完整的 paper-render 调用（装饰图层 + 信息层），
- * 所以拼版上的每一张和编辑页看到的是同一套绘制逻辑，不会「预览对、打印错」。
+ * 每份都走 utils/draw 的同一套分派：白纸系列画「装饰层 + 自适应信息层」，
+ * 深色系列画它自己的背景 / 纹样 / 槽位排版。拼版上的每一张和编辑页看到的
+ * 是同一套绘制逻辑，不会「预览对、打印错」，也不会把深色模板画成白纸。
  */
 
-var paperRender = require('./paper-render')
+var draw = require('./draw')
 
 var CUT_COLOR = '#B8B8B8'
 
@@ -91,15 +92,17 @@ function drawCutMarks (ctx, plan, k) {
  * @param {CanvasRenderingContext2D} ctx
  * @param {object} plan utils/print-layout.js 的 planSheet 结果
  * @param {object} tpl 模板
- * @param {object} data {shopName,ssid,password,type,showPassword,payload,mm}
- * @param {{art?:Image, bounds?:object, pxPerMm:number, vertical?:boolean}} opts
- * @returns {{width:number,height:number,cards:number,qr:mm:number}}
+ * @param {object} data {shopName,ssid,password,type,showPassword,payload}
+ * @param {{art?:Image, bounds?:object, pxPerMm:number, vertical?:boolean, mm?:object}} opts
+ * @returns {{width:number,height:number,cards:number,qrMm:number,moduleMm:number,
+ *            moduleCount:number,warnings:string[]}}
  */
 function renderSheet (ctx, plan, tpl, data, opts) {
   var o = opts || {}
   var k = o.pxPerMm || (300 / 25.4)
   var W = Math.round(plan.sheet.w * k)
   var H = Math.round(plan.sheet.h * k)
+  var isPaper = !!(tpl && tpl.series === 'paper')
 
   ctx.save()
   ctx.fillStyle = '#FFFFFF'
@@ -109,9 +112,9 @@ function renderSheet (ctx, plan, tpl, data, opts) {
   plan.cards.forEach(function (card) {
     var meta = null
     withCardTransform(ctx, card, k, function (cw, ch) {
-      meta = paperRender.renderPaper(ctx, tpl, data, cw, ch, {
-        art: o.art,
-        bounds: o.bounds,
+      meta = draw.drawTemplate(ctx, tpl, data, cw, ch, {
+        art: isPaper ? o.art : null,
+        bounds: isPaper ? o.bounds : null,
         vertical: o.vertical,
         mm: { w: card.logicalW, h: card.logicalH }
       })
@@ -125,14 +128,41 @@ function renderSheet (ctx, plan, tpl, data, opts) {
   ctx.restore()
 
   var first = metas[0] || null
+  var qrMm = 0
+  var moduleMm = 0
+  var moduleCount = 0
+  var warnings = []
+
+  if (first && first.qr) {
+    moduleCount = first.qr.moduleCount || 0
+    if (isPaper && first.qr.sizeMm) {
+      // 白纸渲染器自己按 mm 换算过，直接采信
+      qrMm = first.qr.sizeMm
+      moduleMm = first.qr.moduleMm
+    } else {
+      // 深色渲染器只出像素，按每毫米像素数倒推
+      qrMm = first.qr.size / k
+      moduleMm = moduleCount ? qrMm / (moduleCount + (first.qr.quiet || 4) * 2) : 0
+    }
+    warnings = first.warnings || []
+  }
+
   return {
     width: W,
     height: H,
     cards: plan.cards.length,
     pxPerMm: k,
-    qrMm: first ? first.qr.sizeMm : 0,
-    moduleMm: first ? first.qr.moduleMm : 0,
-    warnings: first ? first.warnings : []
+    series: isPaper ? 'paper' : 'dark',
+    rotate: !!plan.rotate,
+    qrMm: qrMm,
+    moduleMm: moduleMm,
+    moduleCount: moduleCount,
+    warnings: warnings,
+    // 第一张的完整元数据：文案、竖排、避免区都在这，调试与验收都要看
+    card: first,
+    ssid: first ? first.ssid : null,
+    pwd: first ? first.pwd : null,
+    vertical: first ? first.vertical : null
   }
 }
 

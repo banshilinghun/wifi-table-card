@@ -113,9 +113,8 @@
     </view>
 
     <view class="foot">
-      <view class="foot-link" bindtap="goTest">二维码内核自检 ›</view>
       <view class="privacy" bindtap="showPrivacy">
-        <text class="privacy-line">数据只存在这台手机上，不联网、不上传</text>
+        <text class="privacy-line">数据只存在这台手机上；导出的图里带着 Wi-Fi 密码</text>
         <text class="privacy-more">隐私说明 ›</text>
       </view>
       <text class="foot-note">v{{version}}</text>
@@ -129,10 +128,25 @@
       <text class="p-title">隐私说明</text>
       <view class="p-close" bindtap="closePrivacy">×</view>
     </view>
-    <scroll-view class="p-body" scroll-y="true">
+    <scroll-view class="p-body" scroll-y="true" scroll-into-view="{{pInto}}" scroll-with-animation="{{false}}">
       <view class="p-item" wx:for="{{privacyLines}}" wx:key="h">
         <text class="p-h">{{item.h}}</text>
         <text class="p-t">{{item.t}}</text>
+      </view>
+
+      <view class="p-data" id="pdata">
+        <view class="p-data-row" bindtap="clearDraftData">
+          <text class="p-data-name">本机草稿</text>
+          <text class="p-data-state">{{draftExists ? '已保存 · 清空' : '暂无'}}</text>
+        </view>
+        <view class="p-data-row" bindtap="clearWorksData">
+          <text class="p-data-name">作品记录</text>
+          <text class="p-data-state">{{workCount ? workCount + ' 条 · 删除' : '暂无'}}</text>
+        </view>
+        <view class="p-data-row" bindtap="openPrivacyContract">
+          <text class="p-data-name">用户隐私保护指引</text>
+          <text class="p-data-state">查看 ›</text>
+        </view>
       </view>
     </scroll-view>
     <view class="p-foot">

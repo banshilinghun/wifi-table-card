@@ -1,44 +1,111 @@
-# phase1 实机截图
+# phase1 截图（模拟器实拍，非设计稿）
 
-全部由 `tools/auto/shoot-phase1.js` 连真实微信开发者工具（模拟器 iPhone 12/13 Pro ·
-基础库 3.17.6）自动截图后拷到这里，同一轮跑完 **24 项断言**、控制台 **0 error**。
+全部由 `tools/auto/shoot-phase1.js` 连**真实微信开发者工具**跑出来的：模拟器
+iPhone 12/13 Pro（390×844 · dpr 3）· 基础库 3.17.6 · WeChat 8.0.5。
+同一轮跑完 **38 项断言全过**、控制台 **47 条日志 / 0 条 error**。
+
+> ⚠️ 一句实话先说清：这些是**模拟器**截图，不是真机。模拟器能证明「布局对不对、状态传没传对、
+> 导出的图是不是深色、二维码模块数够不够」，但证明不了「纸上扫得出来、相册能写进去、
+> 系统权限弹窗长什么样」。哪些必须真机过一遍，见文末。
+
+## 首页
 
 | 文件 | 内容 | 对应断言 |
 | --- | --- | --- |
-| `01-home-paper.png` | 首页：白纸系列 6 套，缩略图是离屏 canvas 画出来的真卡面 | 16 套模板、分两组、白纸在前、16 张缩略图全部生成 |
-| `02-home-dark.png` | 往下滚：深色系列 10 套（不回归） | 深色模板照常出图 |
-| `03-home-fav.png` | 收藏 2 张，卡片心形点亮、右上角角标 2 | `favCount = 2`、卡片 `fav` 为真 |
+| `01-home-paper.png` | 白纸系列 6 套，缩略图是离屏 canvas 画的真卡面 | 16 套模板、分两组、白纸在前、16 张缩略图全部生成 |
+| `02-home-dark.png` | 往下滚：深色系列 10 套 | 深色模板照常出图 |
+| `03-home-fav.png` | 收藏 2 张，心形点亮、角标 2 | `favCount = 2`、卡片 `fav` 为真 |
 | `04-home-favonly.png` | 「我的收藏」只列 2 张 | `favOnly = true` 时列表 = 2 |
-| `05-privacy.png` | 隐私说明（5 条，含「密码永远不上传」） | 面板打开、5 条文案 |
-| `11-editor-milktea.png` … `16-editor-newyear.png` | 6 套白纸模板的编辑页（奶白 / 红汤 / 山宿 / 花漾 / 清谈 / 岁红） | 每套 `qrMm ≥ 18`、A4 预览 537×760 |
-| `18-editor-vertical-on.png` / `19-editor-vertical-off.png` | 侧边竖排小字开 / 关 | `showVertical` 可切换 |
-| `20-print-full.png` | 打印 · 整张 1 份（190×266mm，码 87.3mm） | 默认版式、标注「标准二维码」 |
-| `21-print-half.png` | 打印 · 半张 2 份（98×137mm，码 44.8mm） | 版式切换生效 |
-| `22-print-card.png` | 打印 · 卡片 4 份（93×130mm，码 42.7mm） | 2×2 拼版、边距 8mm |
-| `23-print-mini.png` | 打印 · 迷你 8 份（47×66mm，码 21.7mm） | 标注「小型二维码」 |
-| `24-print-landscape-card.png` | 横版 A4 拼 4 份（66×93mm） | 横版画布变扁、每份变小 |
-| `25-print-cut-none.png` | 裁切线 · 无 | — |
-| `26-print-cut-cross.png` | 裁切线 · 十字 + 点线 | — |
-| `27-print-cut-dash.png` | 裁切线 · 虚线 | — |
-| `a4-4cards-300dpi.jpg` | **小程序自己导出的成品**：A4 300dpi（2480×3508）拼 4 份 | 4 个二维码全部解出 `WIFI:T:WPA;S:Minsu-Guest;P:welcome88;;` |
+| `05-privacy.png` | 隐私说明面板（7 段） | 面板打开、段落数 |
+| `05b-privacy-data.png` | 面板底部「本机草稿 / 作品记录 / 用户隐私保护指引」三行 | 三行都在、右侧留白 = 32rpx（像素实测） |
 
-成品图不是离线渲染的，是打印页点「导出」后从模拟器文件系统（`wxfile://usr/a4-4cards.jpg`）
-取出来的原图，未做任何处理。
+## 编辑页
 
-重新生成：
+| 文件 | 内容 | 对应断言 |
+| --- | --- | --- |
+| `11-editor-milktea.png` … `16-editor-newyear.png` | 6 套白纸模板（奶白 / 红汤 / 山宿 / 花漾 / 清谈 / 岁红） | 每套标出 `码 96–97mm · 29 模块 · 单模块 2.6mm`，A4 预览 537×760 |
+| `28-dark-editor-night-berth.png` | 深色 `夜泊` 1:1.4 | 比例 1:1.4、码 126mm |
+| `28-dark-editor-ember.png` | 深色 `炉火(醉金)` 2:1 | 比例 2:1、画布 620×310、码 58mm |
+| `18-editor-vertical-on.png` / `19-editor-vertical-off.png` | 侧边竖排小字开 / 关 | 可切换，且**关掉的状态写进了草稿** `showVertical=false` |
+| `17-editor-nopass.png` | 无密码网络（访客 Wi-Fi） | 载荷 `WIFI:T:nopass;S:Minsu-Guest;;`——**不带 P 字段** |
+
+## 打印页 · 4 种 A4 拼版
+
+以 `山宿`（1:1.4 白纸）为例，二维码按真实载荷编码（29 模块），尺寸是算出来的不是写死的：
+
+| 文件 | 版式 | 每份尺寸 | 二维码 | 单模块 |
+| --- | --- | --- | --- | --- |
+| `20-print-full.png` | 整张 1 份 | 190×266mm | 87.6mm | 2.37mm |
+| `21-print-half.png` | 半张 2 份 | 98×137mm | 44.9mm | 1.21mm |
+| `22-print-card.png` | 卡片 4 份 | 93×130mm | 42.9mm | 1.16mm |
+| `23-print-mini.png` | 迷你 8 份（3×3 空一格） | 61×85mm | 28.0mm | 0.76mm |
+
+迷你版式从 2×4 改成 3×3 空一格后，每份面积大 86%，副标题从 1.40mm 回到 1.79mm。
+即使这样，`23` 仍会带警示「副标题只有 1.79mm（建议 ≥ 2.1mm）」——提示是真的，没有藏。
+
+| 文件 | 内容 |
+| --- | --- |
+| `24-print-landscape-card.png` | 横版 A4 拼 4 份（66×93mm，画布 342×242） |
+| `25-print-cut-none.png` `26-print-cut-cross.png` `27-print-cut-dash.png` | 裁切线：无 / 十字+点线 / 虚线 |
+
+## 深色模板打印（本轮重点修复）
+
+| 文件 | 内容 | 对应断言 |
+| --- | --- | --- |
+| `29-dark-print-full.png` | `醉金` 2:1 整张 | 每份 190×95mm——按模板自己的 2:1 排，没被拉成 1:1.4 |
+| `30-dark-print-card.png` | `醉金` 2:1 卡片 4 份 | 每份 133×66mm、码 38.5mm、29 模块、1.04mm |
+| `a4-dark-300dpi.jpg` | **小程序导出的成品**：A4 300dpi 深色 | 2480×3508；深色像素占比 60.2%（白纸是 4.2%） |
+
+## 导出成品（小程序自己存的图，未经二次处理）
+
+| 文件 | 内容 |
+| --- | --- |
+| `a4-4cards-300dpi.jpg` | 白纸 A4 拼 4 份，2480×3508。CIDetector 解出 4 个码，载荷一致 `WIFI:T:WPA;S:Minsu-Guest;P:welcome88;;` |
+| `a4-dark-300dpi.jpg` | 深色 A4 拼 4 份，2480×3508。同上解出 4 个一致载荷 |
+
+两张都不是离线渲染：是打印页点「导出」后，用 `wx.getFileSystemManager().readFile` 以 base64
+回传给 Node 直接落盘的原图。
+
+## 装饰图差异
+
+`art-compare.png` 是给视觉方向做判断用的对比图，左「现在仓库里程序生成的装饰层」，
+右「之前那批公有领域书籍花饰（未接入）」。差异与取舍见 `docs/phase1.md` 的「装饰图」一节。
+
+## 本地数据删除
+
+`31-privacy-cleared.png` —— 清空前本机有草稿 + 2 条作品；点完「清空」「删除」后
+`draftExists=false`、`workCount=0`、storage 里也没了。**用户能自己删干净。**
+
+## 重新生成
 
 ```bash
-# 1) 起自动化通道（端口与已有实例冲突时换一个 auto-port）
+# 1) 起自动化通道（9420 被旧实例占用时用 9421）
 /Applications/wechatwebdevtools.app/Contents/MacOS/cli auto \
   --project "$PWD" --port 48803 --auto-port 9421 --trust-project
-# 2) 截图 + 断言
+
+# 2) 截图 + 断言（约 3 分钟）
 node tools/auto/shoot-phase1.js
 
-# 3) 导出图：脚本会打印保存路径，从模拟器文件系统拷出来
-cp "$HOME/Library/Application Support/微信开发者工具/*/WeappSimulator/WeappFileSystem/*/*/usr/a4-4cards.jpg" \
-   docs/screens/phase1/a4-4cards-300dpi.jpg
+# 3) 验收
 swift tools/decode.swift docs/screens/phase1/a4-4cards-300dpi.jpg
+swift tools/decode.swift docs/screens/phase1/a4-dark-300dpi.jpg
 ```
 
-> 截图先落到系统临时目录：写进项目目录会触发开发者工具重新编译，小程序被重置回首页，
+> 截图先落到系统临时目录：直接写进项目目录会触发开发者工具重新编译，小程序被重置回首页，
 > 后面所有操作作废。跑完再一次性拷进来。
+
+## 哪些还需要真机
+
+模拟器给不了的，必须真机过一遍（这条别省）：
+
+1. **纸上扫得出来吗** —— 屏幕上看码清楚 ≠ 300dpi 打出来手机能扫。尤其迷你 8 份（0.76mm/模块）
+   和深色模板（暗底亮码，部分扫码器反相识别差）。要真打印、真拿两三台手机扫。
+2. **深色模板的实际观感** —— 深色底大面积上墨，普通喷墨机会洇；激光机可能反光。导出的
+   `a4-dark-300dpi.jpg` 只是数据正确，纸面效果得看实物。
+3. **保存到相册的授权链路** —— 模拟器不会真的写相册。真机第一次会弹系统权限，被拒后
+   要走 `wx.openSetting` 回来，这条只在真机成立。
+4. **隐私弹窗** —— `wx.requirePrivacyAuthorize` 在开发者工具里通常直接放行，真机（且后台已
+   配置《用户隐私保护指引》）才会真弹。errno 104/112 的分支只能真机验。
+5. **分享卡片给好友** —— 分享图和二维码里带密码，真机分享出去的观感要确认一次。
+6. **长中文 SSID 的输入法行为** —— 模拟器用键盘输入，真机中文输入法的候选/组合过程可能
+   截断或产生多余字符，需要真机试「32 字中文 SSID + 63 位密码」。

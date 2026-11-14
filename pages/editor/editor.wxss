@@ -287,3 +287,10 @@
 .btn-print::after {
   border: none;
 }
+
+/* 二维码实测的第二行：模块数越大越难扫，摆在毫米数下面 */
+.stage-sub-2 {
+  margin-top: 2rpx;
+  font-size: 21rpx;
+  color: var(--text-3);
+}
